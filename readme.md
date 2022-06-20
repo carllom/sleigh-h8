@@ -56,3 +56,9 @@ H8/300H has added:
 ## Links
 
 [https://spinsel.dev/assets/2020-06-17-ghidra-brainfuck-processor-1/ghidra_docs/language_spec/html/sleigh_definitions.html](SLEIGH specification)
+
+## TODOs
+
+Check half-carry in ccr macro - what if it is word (bit11) or longword (bit??) op? How to distinguish size of input variables? Or different macros for different sizes?
+
+carry (C) or scarry/overflow(V) uses built in functions - is OK?

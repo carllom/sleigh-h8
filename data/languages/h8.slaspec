@@ -1,5 +1,8 @@
 # https://spinsel.dev/assets/2020-06-17-ghidra-brainfuck-processor-1/ghidra_docs/language_spec/html/sleigh_definitions.html
 
+# H8/300 reference: https://www.classes.cs.uchicago.edu/archive/2006/winter/23000-1/docs/h8300.pdf
+# H8/300H reference: http://www.bitsavers.org/components/hitachi/h8/H8_300H_Programming_Manual.pdf
+
 define endian=big;
 
 define alignment=2;
@@ -18,19 +21,6 @@ define register offset=0 size=1 [_ _ r0h r0l _ _ r1h r1l _ _ r2h r2l _ _ r3h r3l
 define register offset=0x100 size=3 [pc];
 define register offset=0x200 size=1 [ccr];
 
-#define bitrange I=ccr[7,1] # Interrupt mask
-#				UI=ccr[6,1] # User bit or interrupt mask
-#				H=ccr[5,1] # Half-carry
-#				U=ccr[4,1] # User bit
-#				N=ccr[3,1] # Negative
-#				Z=ccr[2,1] # Zero
-#				V=ccr[1,1] # Overflow
-#				C=ccr[0,1]; # Carry
-
-#define register offset=0x100 size=1 [cp dp ep tp br];
-
-
-
 # CCR Flags
 @define I_FLAG   "ccr[7,1]"
 @define UI_FLAG  "ccr[6,1]"
@@ -41,44 +31,15 @@ define register offset=0x200 size=1 [ccr];
 @define V_FLAG   "ccr[1,1]"
 @define C_FLAG   "ccr[0,1]"
 
-#define token instruction_1byte(8)
-#	opcode_8=(0,7)
-#;
-
-#define token instruction_2byte(16)
-#	opcode_16=(0,3)
-#	operand_size_16=(4,4)
-#	imm8_16=(8,15)	
-#	address_mode_16=(0,3)
-#	register_16=(5,7)
-#	opcode_wholeword = (0,15)
-#	opcode_firstbyte = (0,7)
-#	immediate_value_byte = (8,15)
-#	opcode_00_04 = (0,4)
-#	register_05_07 = (5,7)
-#	opcode_08_15 = (8,15)
-#;
-
-#define token instruction_3byte(24)
-#	opcode_24=(0,3)
-#	operand_size_24=(4,4)
-#	register_24=(5,7)
-#	imm16_24=(16,23)
-#;
-
-#define token instruction_4byte(32)
-#	opcode1_32bit = (0,7)
-#	address_24bit = (8,31)
-#	address_16bit = (8,23)
-#	opcode2_32bit = (24,31)
-#;
-
 define token ins1(8)
 	op4=(4,7)
 	op8=(0,7)
 	sreg=(4,7)
 	dreg=(0,3)
 	imm8=(0,7)
+	rs3=(4,6)
+	rd3=(0,2)
+	imm4=(0,3)
 ;
 
 define token ins2(16)
@@ -120,33 +81,63 @@ macro pop4(val) {
 }
 
 macro setResultFlags(result) {
-	Z_FLAG = (result == 0);
-	N_FLAG = (result s< 0);
+	ccr[2,1] = (result == 0); # Z_FLAG
+	ccr[3,1] = (result s< 0); # N_FLAG
 }
 
 macro additionFlags(operand1, operand2) {
 	local AFmask = -1 >> 4;
-	H_FLAG = (((operand1 & AFmask) + (operand2 & AFmask)) & (AFmask + 1)) != 0;
-	V_FLAG = scarry(operand1, operand2);
-	C_FLAG = carry(operand1, operand2);
+	ccr[5,1] = (((operand1 & AFmask) + (operand2 & AFmask)) & (AFmask + 1)) != 0; # H_FLAG
+	ccr[1,1] = scarry(operand1, operand2); # V_FLAG
+	ccr[0,1] = carry(operand1, operand2); # C_FLAG
 }
 
 # maps register names to fields
-# attach variables [  register_05_07 register_24 register_16 ] [ r0 r1 r2 r3 r4 r5 fp sp ];
 attach variables [ sreg dreg ] [ r0l r1l r2l r3l r4l r5l r6l r7l r0h r1h r2h r3h r4h r5h r6h r7h ];
+attach variables [ rs3 rd3 ] [ r0 r1 r2 r3 r4 r5 r6 r7 ];
 
-:add.b imm8_2_0,dreg is op4=0b1000 & dreg; imm8
-{
+# H8/300 instructions
+
+:add.b #imm8,dreg is op4=0x8 & dreg; imm8 {
 	additionFlags(dreg, imm8);
 	dreg = dreg + imm8;
 	setResultFlags(dreg);
 }
-:add.b sreg,dreg is op8=0b00001000; sreg & dreg
-{
+:add.b sreg,dreg is op8=0x08; sreg & dreg {
 	additionFlags(dreg, sreg);
 	dreg = dreg + sreg;
 	setResultFlags(dreg);
 }
+:add.w rs3,rd3 is op8=0x09; rs3 & rd3 {
+	additionFlags(rd3, rs3);
+	rd3 = rd3 + rs3;
+	setResultFlags(rd3);
+}
+:adds #1,rd3 is op8=0x0B; op4=0 & rd3 { rd3 = rd3 + 1; }
+:adds #2,rd3 is op8=0x0B; op4=8 & rd3 { rd3 = rd3 + 2; }
+:addx #imm8,dreg is op4=0x9 & dreg; imm8 {
+	local srcop = imm8 + $(C_FLAG);
+	additionFlags(dreg, srcop);
+	dreg = dreg + srcop;
+	setResultFlags(dreg);
+}
+:addx sreg,dreg is op8=0x0E; sreg & dreg {
+	local srcop = sreg + $(C_FLAG);
+	additionFlags(dreg, srcop);
+	dreg = dreg + srcop;
+	setResultFlags(dreg);
+}
+:and #imm8,dreg is op4=0xE & dreg; imm8 {
+	dreg = dreg & imm8;
+	setResultFlags(dreg);
+	$(V_FLAG) = 0;
+}
+:and sreg,dreg is op8=0x16; sreg & dreg {
+	dreg = dreg & sreg;
+	setResultFlags(dreg);
+	$(V_FLAG) = 0;
+}
+:andc #imm8,"ccr" is op8=0x06; imm8 { ccr = ccr & imm8; }
 
 
 ############### DATA #############
