@@ -37,9 +37,16 @@ define token ins1(8)
 	sreg=(4,7)
 	dreg=(0,3)
 	imm8=(0,7)
+	simm8=(0,7) signed
 	rs3=(4,6)
 	rd3=(0,2)
 	imm4=(0,3)
+	bit=(4,6)
+	ccfld=(0,3)
+	b3=(3,3)
+	b7=(7,7)
+	lnyb=(0,3)
+	hnyb=(4,7)
 ;
 
 define token ins2(16)
@@ -81,7 +88,7 @@ macro pop4(val) {
 }
 
 macro setResultFlags(result) {
-	ccr[2,1] = (result == 0); # Z_FLAG
+	$(Z_FLAG) = (result == 0); # Z_FLAG
 	ccr[3,1] = (result s< 0); # N_FLAG
 }
 
@@ -98,6 +105,27 @@ attach variables [ rs3 rd3 ] [ r0 r1 r2 r3 r4 r5 r6 r7 ];
 
 # H8/300 instructions
 
+imm8mem.b: @imm8 is imm8 { export *:1 imm8; }
+pcoff8: reloc is simm8 [ reloc=inst_next+simm8; ] { export *:3 reloc; }
+
+cc: "ra" is ccfld=0 { export 1:1; }
+cc: "rn" is ccfld=1 { export 0:1; }
+cc: "hi" is ccfld=2 { tmp:1 = !($(C_FLAG) || $(Z_FLAG)); export tmp; }
+cc: "ls" is ccfld=3 { tmp:1 = $(C_FLAG) || $(Z_FLAG); export tmp; }
+cc: "cc" is ccfld=4 { tmp:1 = !$(C_FLAG); export tmp; }
+cc: "cs" is ccfld=5 { tmp:1 = $(C_FLAG); export tmp; }
+cc: "ne" is ccfld=6 { tmp:1 = !$(Z_FLAG); export tmp; }
+cc: "eq" is ccfld=7 { tmp:1 = $(Z_FLAG); export tmp; }
+cc: "vc" is ccfld=8 { tmp:1 = !$(V_FLAG); export tmp; }
+cc: "vs" is ccfld=9 { tmp:1 = $(V_FLAG); export tmp; }
+cc: "pl" is ccfld=10 { tmp:1 = !$(N_FLAG); export tmp; }
+cc: "mi" is ccfld=11 { tmp:1 = $(N_FLAG); export tmp; }
+cc: "ge" is ccfld=12 { tmp:1 = ($(V_FLAG)==$(N_FLAG)); export tmp; }
+cc: "lt" is ccfld=13 { tmp:1 = ($(V_FLAG)!=$(N_FLAG)); export tmp; }
+cc: "gt" is ccfld=14 { tmp:1 = !$(Z_FLAG) && ($(V_FLAG)==$(N_FLAG)); export tmp; }
+cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
+
+
 :add.b #imm8,dreg is op4=0x8 & dreg; imm8 {
 	additionFlags(dreg, imm8);
 	dreg = dreg + imm8;
@@ -108,13 +136,13 @@ attach variables [ rs3 rd3 ] [ r0 r1 r2 r3 r4 r5 r6 r7 ];
 	dreg = dreg + sreg;
 	setResultFlags(dreg);
 }
-:add.w rs3,rd3 is op8=0x09; rs3 & rd3 {
+:add.w rs3,rd3 is op8=0x09; b7=0 & rs3 & b3=0 & rd3 {
 	additionFlags(rd3, rs3);
 	rd3 = rd3 + rs3;
 	setResultFlags(rd3);
 }
-:adds #1,rd3 is op8=0x0B; op4=0 & rd3 { rd3 = rd3 + 1; }
-:adds #2,rd3 is op8=0x0B; op4=8 & rd3 { rd3 = rd3 + 2; }
+:adds #1,rd3 is op8=0x0B; op4=0 & b3=0 & rd3 { rd3 = rd3 + 1; }
+:adds #2,rd3 is op8=0x0B; op4=8 & b3=0 & rd3 { rd3 = rd3 + 2; }
 :addx #imm8,dreg is op4=0x9 & dreg; imm8 {
 	local srcop = imm8 + $(C_FLAG);
 	additionFlags(dreg, srcop);
@@ -138,6 +166,49 @@ attach variables [ rs3 rd3 ] [ r0 r1 r2 r3 r4 r5 r6 r7 ];
 	$(V_FLAG) = 0;
 }
 :andc #imm8,"ccr" is op8=0x06; imm8 { ccr = ccr & imm8; }
+:band #bit,dreg is op8=0x76; b7=0 & bit & dreg {
+	local rbit = (dreg >> bit) & 1;
+	$(C_FLAG) = $(C_FLAG) & rbit;
+}
+:band #bit,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x76; b7=0 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) & ((* rs3) >> bit);
+}
+:band #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x76; b7=0 & bit & lnyb=0 {
+	$(C_FLAG) = $(C_FLAG) & (imm8mem.b >> bit);
+}
+:b^cc pcoff8 is op4=4 & cc; pcoff8 {
+	if (cc) goto pcoff8;
+}
+
+:bclr #bit,dreg is op8=0x72; b7=0 & bit & dreg {
+	dreg = dreg & ~(1 << bit);
+}
+:bclr #bit,@rs3 is op8=0x7D; b7=0 & rs3 & lnyb=0; op8=0x72; b7=0 & bit & lnyb=0 {
+	* rs3 = (*:1 rs3) & ~(1 << bit);
+}
+:bclr #bit,imm8mem.b is op8=0x7F; imm8mem.b; op8=0x72; b7=0 & bit & lnyb=0 {
+	imm8mem.b = imm8mem.b &  ~(1 << bit);
+}
+:bclr sreg,dreg is op8=0x62; sreg & dreg {
+	dreg = dreg & ~(1 << (sreg & 7));
+}
+:bclr sreg,@rs3 is op8=0x7D; b7=0 & rs3 & lnyb=0; op8=0x62; sreg & lnyb=0 {
+	* rs3 = (*:1 rs3) & ~(1 << (sreg & 7));
+}
+:bclr sreg,imm8mem.b is op8=0x7F; imm8mem.b; op8=0x62; sreg & lnyb=0 {
+	imm8mem.b = imm8mem.b &  ~(1 << (sreg & 7));
+}
+:biand #bit,dreg is op8=0x76; b7=1 & bit & dreg {
+	local rbit = ~((dreg >> bit) & 1);
+	$(C_FLAG) = $(C_FLAG) & rbit;
+}
+:biand #bit,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x76; b7=1 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) & ~((* rs3) >> bit);
+}
+:biand #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x76; b7=1 & bit & lnyb=0 {
+	$(C_FLAG) = $(C_FLAG) & ~(imm8mem.b >> bit);
+}
+
 
 
 ############### DATA #############

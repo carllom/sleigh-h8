@@ -62,3 +62,5 @@ H8/300H has added:
 Check half-carry in ccr macro - what if it is word (bit11) or longword (bit??) op? How to distinguish size of input variables? Or different macros for different sizes?
 
 carry (C) or scarry/overflow(V) uses built in functions - is OK?
+
+~! match 0 bits, sometimes they do matter (band, biand) - go through all instructions and fill in 0-bits~
