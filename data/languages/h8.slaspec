@@ -11,14 +11,16 @@ define space ram type=ram_space size=2 default;
 define space register type=register_space size=2;
 
 
-define space address type=ram_space size=3;
+define space address type=ram_space size=2;
 
 # Overlapping names for general registers
-define register offset=0 size=4 [er0 er1 er2 er3 er4 er5 er6 sp];
-define register offset=0 size=2 [e0 r0 e1 r1 e2 r2 e3 r3 e4 r4 e5 r5 e6 r6 e7 r7];
-define register offset=0 size=1 [_ _ r0h r0l _ _ r1h r1l _ _ r2h r2l _ _ r3h r3l _ _ r4h r4l _ _ r5h r5l _ _ r6h r6l _ _ r7h r7l];
+#define register offset=0 size=4 [er0 er1 er2 er3 er4 er5 er6 sp];
+#define register offset=0 size=2 [e0 r0 e1 r1 e2 r2 e3 r3 e4 r4 e5 r5 e6 r6 e7 r7];
+#define register offset=0 size=1 [_ _ r0h r0l _ _ r1h r1l _ _ r2h r2l _ _ r3h r3l _ _ r4h r4l _ _ r5h r5l _ _ r6h r6l _ _ r7h r7l];
+define register offset=0 size=2 [r0 r1 r2 r3 r4 r5 r6 sp];
+define register offset=0 size=1 [r0h r0l r1h r1l r2h r2l r3h r3l r4h r4l r5h r5l r6h r6l r7h r7l];
 
-define register offset=0x100 size=3 [pc];
+define register offset=0x100 size=2 [pc];
 define register offset=0x200 size=1 [ccr];
 
 # CCR Flags
@@ -68,8 +70,8 @@ macro pop2(val) {
 }
 
 macro branch() {
-	*[register]:3 sp = pc;
 	sp = sp-4;
+	*:4 sp = inst_next;
 }
 
 macro branchret() {
@@ -101,7 +103,7 @@ macro additionFlags(operand1, operand2) {
 
 # maps register names to fields
 attach variables [ sreg dreg ] [ r0l r1l r2l r3l r4l r5l r6l r7l r0h r1h r2h r3h r4h r5h r6h r7h ];
-attach variables [ rs3 rd3 ] [ r0 r1 r2 r3 r4 r5 r6 r7 ];
+attach variables [ rs3 rd3 ] [ r0 r1 r2 r3 r4 r5 r6 sp ];
 
 # H8/300 instructions
 
@@ -166,6 +168,11 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	$(V_FLAG) = 0;
 }
 :andc #imm8,"ccr" is op8=0x06; imm8 { ccr = ccr & imm8; }
+
+:b^cc pcoff8 is op4=4 & cc; pcoff8 {
+	if (cc) goto pcoff8;
+}
+
 :band #bit,dreg is op8=0x76; b7=0 & bit & dreg {
 	local rbit = (dreg >> bit) & 1;
 	$(C_FLAG) = $(C_FLAG) & rbit;
@@ -176,10 +183,6 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :band #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x76; b7=0 & bit & lnyb=0 {
 	$(C_FLAG) = $(C_FLAG) & (imm8mem.b >> bit);
 }
-:b^cc pcoff8 is op4=4 & cc; pcoff8 {
-	if (cc) goto pcoff8;
-}
-
 :bclr #bit,dreg is op8=0x72; b7=0 & bit & dreg {
 	dreg = dreg & ~(1 << bit);
 }
@@ -208,7 +211,149 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :biand #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x76; b7=1 & bit & lnyb=0 {
 	$(C_FLAG) = $(C_FLAG) & ~(imm8mem.b >> bit);
 }
+:bild #bit,dreg is op8=0x77; b7=1 & bit & dreg {
+	$(C_FLAG) = ~((dreg >> bit) & 1);
+}
+:bild #bit,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x77; b7=1 & bit & lnyb=0 { 
+	$(C_FLAG) = ~((* rs3) >> bit);
+}
+:bild #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x77; b7=1 & bit & lnyb=0 {
+	$(C_FLAG) = ~(imm8mem.b >> bit);
+}
+:bior #bit,dreg is op8=0x74; b7=1 & bit & dreg {
+	local rbit = ~((dreg >> bit) & 1);
+	$(C_FLAG) = $(C_FLAG) | rbit;
+}
+:bior #bit,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x74; b7=1 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) | ~((* rs3) >> bit);
+}
+:bior #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x74; b7=1 & bit & lnyb=0 {
+	$(C_FLAG) = $(C_FLAG) | ~(imm8mem.b >> bit);
+}
+:bist #bit,dreg is op8=0x67; b7=1 & bit & dreg {
+	local masked = dreg & ~(1 << bit);
+	dreg = masked | (~$(C_FLAG) << bit);
+}
+:bist #bit,@rs3 is op8=0x7D; b7=0 & rs3 & lnyb=0; op8=0x67; b7=1 & bit & lnyb=0 {
+	local masked = (*:1 rs3) & ~(1 << bit);
+	* rs3 = masked | (~$(C_FLAG) << bit);
+}
+:bist #bit,imm8mem.b is op8=0x7F; imm8mem.b; op8=0x67; b7=1 & bit & lnyb=0 {
+	local masked = imm8mem.b &  ~(1 << bit);
+	imm8mem.b = masked | (~$(C_FLAG) << bit);
+}
+:bixor #bit,dreg is op8=0x75; b7=1 & bit & dreg {
+	local rbit = ~((dreg >> bit) & 1);
+	$(C_FLAG) = $(C_FLAG) ^ rbit;
+}
+:bixor #bit,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x75; b7=1 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) ^ ~((* rs3) >> bit);
+}
+:bixor #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x75; b7=1 & bit & lnyb=0 {
+	$(C_FLAG) = $(C_FLAG) ^ ~(imm8mem.b >> bit);
+}
+:bld #bit,dreg is op8=0x77; b7=0 & bit & dreg {
+	$(C_FLAG) = ((dreg >> bit) & 1);
+}
+:bld #bit,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x77; b7=0 & bit & lnyb=0 { 
+	$(C_FLAG) = ((* rs3) >> bit);
+}
+:bld #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x77; b7=0 & bit & lnyb=0 {
+	$(C_FLAG) = (imm8mem.b >> bit);
+}
+:bnot #bit,dreg is op8=0x71; b7=0 & bit & dreg {
+	dreg = dreg ^ (1<<bit);
+}
+:bnot #bit,@rs3 is op8=0x7D; b7=0 & rs3 & lnyb=0; op8=0x71; b7=0 & bit & lnyb=0 {
+	* rs3 = (*:1 rs3) ^ (1 << bit);
+}
+:bnot #bit,imm8mem.b is op8=0x7F; imm8mem.b; op8=0x71; b7=0 & bit & lnyb=0 {
+	imm8mem.b = imm8mem.b ^ (1<<bit);
+}
+:bnot sreg,dreg is op8=0x61; sreg & dreg {
+	dreg = dreg ^ (1<<(sreg&7));
+}
+:bnot sreg,@rs3 is op8=0x7D; b7=0 & rs3 & lnyb=0; op8=0x61; sreg & lnyb=0 {
+	* rs3 = (*:1 rs3) ^ (1<<(sreg&7));
+}
+:bnot sreg,imm8mem.b is op8=0x7F; imm8mem.b; op8=0x61; sreg & lnyb=0 {
+	imm8mem.b = imm8mem.b ^ (1<<(sreg&7));
+}
+:bor #bit,dreg is op8=0x74; b7=0 & bit & dreg {
+	local rbit = ((dreg >> bit) & 1);
+	$(C_FLAG) = $(C_FLAG) | rbit;
+}
+:bor #bit,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x74; b7=0 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) | ((* rs3) >> bit);
+}
+:bor #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x74; b7=0 & bit & lnyb=0 {
+	$(C_FLAG) = $(C_FLAG) | (imm8mem.b >> bit);
+}
+:bset #bit,dreg is op8=0x70; b7=0 & bit & dreg {
+	dreg = dreg | (1 << bit);
+}
+:bset #bit,@rs3 is op8=0x7D; b7=0 & rs3 & lnyb=0; op8=0x70; b7=0 & bit & lnyb=0 {
+	* rs3 = (*:1 rs3) | (1 << bit);
+}
+:bset #bit,imm8mem.b is op8=0x7F; imm8mem.b; op8=0x70; b7=0 & bit & lnyb=0 {
+	imm8mem.b = imm8mem.b | (1 << bit);
+}
+:bset sreg,dreg is op8=0x60; sreg & dreg {
+	dreg = dreg | (1 << (sreg & 7));
+}
+:bset sreg,@rs3 is op8=0x7D; b7=0 & rs3 & lnyb=0; op8=0x60; sreg & lnyb=0 {
+	* rs3 = (*:1 rs3) | (1 << (sreg & 7));
+}
+:bset sreg,imm8mem.b is op8=0x7F; imm8mem.b; op8=0x60; sreg & lnyb=0 {
+	imm8mem.b = imm8mem.b | (1 << (sreg & 7));
+}
+:bst #bit,dreg is op8=0x67; b7=0 & bit & dreg {
+	local masked = dreg & ~(1 << bit);
+	dreg = masked | ($(C_FLAG) << bit);
+}
+:bst #bit,@rs3 is op8=0x7D; b7=0 & rs3 & lnyb=0; op8=0x67; b7=0 & bit & lnyb=0 {
+	local masked = (*:1 rs3) & ~(1 << bit);
+	* rs3 = masked | ($(C_FLAG) << bit);
+}
+:bst #bit,imm8mem.b is op8=0x7F; imm8mem.b; op8=0x67; b7=0 & bit & lnyb=0 {
+	local masked = imm8mem.b &  ~(1 << bit);
+	imm8mem.b = masked | ($(C_FLAG) << bit);
+}
+:btst #bit,dreg is op8=0x73; b7=0 & bit & dreg {
+	$(Z_FLAG) = ~(dreg >> bit) & 1;
+}
+:btst #bit,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x73; b7=0 & bit & lnyb=0 {
+	$(Z_FLAG) = ~((*:1 rs3) >> bit) & 1;
+}
+:btst #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x73 & b7=0 & bit & lnyb=0 {
+	$(Z_FLAG) = ~(imm8mem.b >> bit) & 1;
+}
+:btst sreg,dreg is op8=0x63; sreg & dreg {
+	$(Z_FLAG) = ~(dreg >> (sreg & 7)) & 1;
+}
+:btst sreg,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x63; sreg & lnyb=0 {
+	$(Z_FLAG) = ~((*:1 rs3) >> (sreg & 7)) & 1;
+}
+:btst sreg,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x63; sreg & lnyb=0 {
+	$(Z_FLAG) = ~(imm8mem.b >> (sreg & 7)) & 1;
+}
+:bxor #bit,dreg is op8=0x75; b7=0 & bit & dreg {
+	local rbit = ((dreg >> bit) & 1);
+	$(C_FLAG) = $(C_FLAG) ^ rbit;
+}
+:bxor #bit,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x75; b7=0 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) ^ ((* rs3) >> bit) & 1;
+}
+:bxor #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x75; b7=0 & bit & lnyb=0 {
+	$(C_FLAG) = $(C_FLAG) ^ (imm8mem.b >> bit) & 1;
+}
 
+
+:bsr pcoff8 is op8=0x55; pcoff8 {
+	sp = sp-2;
+	* sp = (&:2 inst_next);
+	call pcoff8;
+}
 
 
 ############### DATA #############
