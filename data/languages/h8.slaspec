@@ -325,7 +325,7 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :btst #bit,@rs3 is op8=0x7C; b7=0 & rs3 & lnyb=0; op8=0x73; b7=0 & bit & lnyb=0 {
 	$(Z_FLAG) = ~((*:1 rs3) >> bit) & 1;
 }
-:btst #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x73 & b7=0 & bit & lnyb=0 {
+:btst #bit,imm8mem.b is op8=0x7E; imm8mem.b; op8=0x73; b7=0 & bit & lnyb=0 {
 	$(Z_FLAG) = ~(imm8mem.b >> bit) & 1;
 }
 :btst sreg,dreg is op8=0x63; sreg & dreg {
@@ -348,6 +348,13 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	$(C_FLAG) = $(C_FLAG) ^ (imm8mem.b >> bit) & 1;
 }
 
+:cmp.b #imm8,dreg is op4=0xA & dreg; imm8 {
+	$(H_FLAG) = sborrow(dreg & 15, imm8 & 15);
+	$(N_FLAG) = 0 s> (dreg - imm8);
+	$(Z_FLAG) = dreg == imm8;
+
+	$(C_FLAG) = sborrow(dreg, imm8);	
+}
 
 :bsr pcoff8 is op8=0x55; pcoff8 {
 	sp = sp-2;
