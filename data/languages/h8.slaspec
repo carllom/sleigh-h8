@@ -1,7 +1,10 @@
-# https://spinsel.dev/assets/2020-06-17-ghidra-brainfuck-processor-1/ghidra_docs/language_spec/html/sleigh_definitions.html
+# About running SLEIGH: https://swarm.ptsecurity.com/creating-a-ghidra-processor-module-in-sleigh-using-v8-bytecode-as-an-example/
+# SLEIGH language: https://spinsel.dev/assets/2020-06-17-ghidra-brainfuck-processor-1/ghidra_docs/language_spec/html/sleigh_definitions.html
 
 # H8/300 reference: https://www.classes.cs.uchicago.edu/archive/2006/winter/23000-1/docs/h8300.pdf
 # H8/300H reference: http://www.bitsavers.org/components/hitachi/h8/H8_300H_Programming_Manual.pdf
+
+# ..\..\..\..\..\support\sleigh.bat h8.slaspec h8.sla
 
 define endian=big;
 
@@ -59,6 +62,9 @@ define token ins3(24)
 	op24=(0,23)
 ;
 
+# How is this implemented?!
+define pcodeop bcdAdjust;
+
 macro push2(val) {
 	*[register]:2 sp = val;
 	sp = sp-2;
@@ -89,16 +95,34 @@ macro pop4(val) {
 	val = *[register]:4 sp;
 }
 
-macro setResultFlags(result) {
-	$(Z_FLAG) = (result == 0); # Z_FLAG
-	ccr[3,1] = (result s< 0); # N_FLAG
+macro resflags(result) {
+	$(Z_FLAG) = (result == 0);
+	$(N_FLAG) = (result s< 0);
 }
 
-macro additionFlags(operand1, operand2) {
+macro movflags(result) {
+	$(Z_FLAG) = (result == 0);
+	$(N_FLAG) = (result s< 0);
+	$(V_FLAG) = 0;
+}
+
+macro addflags(operand1, operand2) {
 	local AFmask = -1 >> 4;
-	ccr[5,1] = (((operand1 & AFmask) + (operand2 & AFmask)) & (AFmask + 1)) != 0; # H_FLAG
-	ccr[1,1] = scarry(operand1, operand2); # V_FLAG
-	ccr[0,1] = carry(operand1, operand2); # C_FLAG
+	$(H_FLAG) = (((operand1 & AFmask) + (operand2 & AFmask)) & (AFmask + 1)) != 0;
+	$(V_FLAG) = scarry(operand1, operand2);
+	$(C_FLAG) = carry(operand1, operand2);
+}
+
+macro subflags3(operand1,operand2) {
+  $(H_FLAG) = (operand1 & 15) < (operand2 & 15);
+  $(V_FLAG) = sborrow(operand1,operand2);
+  $(C_FLAG) = operand1 < operand2;
+}
+
+macro subflags11(operand1,operand2) {
+  $(H_FLAG) = (operand1 & 4095) < (operand2 & 4095);
+  $(V_FLAG) = sborrow(operand1,operand2);
+  $(C_FLAG) = operand1 < operand2;
 }
 
 # maps register names to fields
@@ -107,7 +131,11 @@ attach variables [ rs3 rd3 ] [ r0 r1 r2 r3 r4 r5 r6 sp ];
 
 # H8/300 instructions
 
+addr8: @addr8 is addr8 { export *:2 addr8; }
+addr16: @addr16 is addr16 { export *:2 addr16; }
 imm8mem.b: @imm8 is imm8 { export *:1 imm8; }
+imm16mem.b: @imm16 is imm16 { export *:1 imm16; }
+imm16mem.w: @imm16 is imm16 { export *:2 imm16; }
 pcoff8: reloc is simm8 [ reloc=inst_next+simm8; ] { export *:3 reloc; }
 
 cc: "ra" is ccfld=0 { export 1:1; }
@@ -129,45 +157,45 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 
 
 :add.b #imm8,dreg is op4=0x8 & dreg; imm8 {
-	additionFlags(dreg, imm8);
+	addflags(dreg, imm8);
 	dreg = dreg + imm8;
-	setResultFlags(dreg);
+	resflags(dreg);
 }
 :add.b sreg,dreg is op8=0x08; sreg & dreg {
-	additionFlags(dreg, sreg);
+	addflags(dreg, sreg);
 	dreg = dreg + sreg;
-	setResultFlags(dreg);
+	resflags(dreg);
 }
 :add.w rs3,rd3 is op8=0x09; b7=0 & rs3 & b3=0 & rd3 {
-	additionFlags(rd3, rs3);
+	addflags(rd3, rs3);
 	rd3 = rd3 + rs3;
-	setResultFlags(rd3);
+	resflags(rd3);
 }
 :adds #1,rd3 is op8=0x0B; op4=0 & b3=0 & rd3 { rd3 = rd3 + 1; }
 :adds #2,rd3 is op8=0x0B; op4=8 & b3=0 & rd3 { rd3 = rd3 + 2; }
 :addx #imm8,dreg is op4=0x9 & dreg; imm8 {
 	local srcop = imm8 + $(C_FLAG);
-	additionFlags(dreg, srcop);
+	addflags(dreg, srcop);
 	dreg = dreg + srcop;
-	setResultFlags(dreg);
+	resflags(dreg);
 }
 :addx sreg,dreg is op8=0x0E; sreg & dreg {
 	local srcop = sreg + $(C_FLAG);
-	additionFlags(dreg, srcop);
+	addflags(dreg, srcop);
 	dreg = dreg + srcop;
-	setResultFlags(dreg);
+	resflags(dreg);
 }
 :and #imm8,dreg is op4=0xE & dreg; imm8 {
 	dreg = dreg & imm8;
-	setResultFlags(dreg);
+	resflags(dreg);
 	$(V_FLAG) = 0;
 }
 :and sreg,dreg is op8=0x16; sreg & dreg {
 	dreg = dreg & sreg;
-	setResultFlags(dreg);
+	resflags(dreg);
 	$(V_FLAG) = 0;
 }
-:andc #imm8,"ccr" is op8=0x06; imm8 { ccr = ccr & imm8; }
+:andc "#"imm8,"ccr" is op8=0x06; imm8 { ccr = ccr & imm8; }
 
 :b^cc pcoff8 is op4=4 & cc; pcoff8 {
 	if (cc) goto pcoff8;
@@ -348,19 +376,130 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	$(C_FLAG) = $(C_FLAG) ^ (imm8mem.b >> bit) & 1;
 }
 
-:cmp.b #imm8,dreg is op4=0xA & dreg; imm8 {
-	$(H_FLAG) = sborrow(dreg & 15, imm8 & 15);
-	$(N_FLAG) = 0 s> (dreg - imm8);
-	$(Z_FLAG) = dreg == imm8;
-
-	$(C_FLAG) = sborrow(dreg, imm8);	
-}
-
 :bsr pcoff8 is op8=0x55; pcoff8 {
 	sp = sp-2;
 	* sp = (&:2 inst_next);
 	call pcoff8;
 }
+
+:cmp.b #imm8,dreg is op4=0xA & dreg; imm8 {
+	subflags3(dreg, imm8);
+	resflags(dreg-imm8);
+}
+:cmp.b sreg,dreg is op8=0x1C; sreg & dreg {
+	subflags3(dreg, sreg);
+	resflags(dreg-sreg);
+}
+:cmp.w rs3,rd3 is op8=0x1D; b7=0 & rs3 & b3=0 & rd3 {
+	subflags11(rd3, rs3);
+	resflags(rd3-rs3);
+}
+:daa dreg is op8=0x0F; hnyb=0 & dreg {
+	#local ln:4 = zext(dreg[0,4]);
+	#local un:4 = zext(dreg[4,4]);
+	bcdAdjust(dreg);
+  # TODO
+} 
+:das dreg is op8=0x1F; hnyb=0 & dreg {
+	#local ln:4 = zext(dreg[0,4]);
+	#local un:4 = zext(dreg[4,4]);
+	bcdAdjust(dreg);
+  # TODO
+}
+:dec dreg is op8=0x1A; hnyb=0 & dreg {
+	$(V_FLAG) = dreg == 0x80;
+	dreg = dreg - 1;
+	resflags(dreg);
+}
+:divxu sreg,rd3 is op8=0x51; sreg & b3=0 & rd3 {
+	local rem = rd3 % sext(sreg);
+	local quot = rd3 / sext(sreg);
+	rd3 = rem << 8 | quot;
+	resflags(sreg);
+}
+:eepmov is op8=0x7B; op8=0x5C; op8=0x59; op8=0x8F {
+	if (r4l != 0) goto <end>;
+	<nextbyte>
+	*:1 r6 = *:1 r5;
+	r5 = r5 + 1;
+	r6 = r6 + 1;
+	r4l = r4l - 1;
+	if (r4l != 0) goto <nextbyte>;
+	<end>
+}
+:inc dreg is op8=0x0A; hnyb=0 & dreg {
+	$(V_FLAG) = dreg == 0x7F;
+	dreg = dreg + 1;
+	resflags(dreg);
+}
+
+:jmp @rs3 is op8=0x59; b7=0 & rs3 & lnyb=0 {
+	goto [rs3];
+}
+:jmp @addr16 is op8=0x5A; op8=0; addr16 {
+	goto addr16;
+}
+:jmp @@addr8 is op8=0x5B; addr8 {
+	goto [addr8];
+}
+:jsr @rs3 is op8=0x5D; b7=0 & rs3 & lnyb=0 {
+	sp = sp-2;
+	* sp = (&:2 inst_next);
+	call [rs3];
+}
+:jsr @addr16 is op8=0x5E; op8=0; addr16 {
+	sp = sp-2;
+	* sp = (&:2 inst_next);
+	call addr16;
+}
+:jsr @@addr8 is op8=0x5F; addr8 {
+	sp = sp-2;
+	* sp = (&:2 inst_next);
+	call [addr8];
+}
+
+:ldc "#"imm8,"ccr" is op8=0x07; imm8 { ccr = imm8; }
+:ldc dreg,"ccr" is op8=0x03; hnyb=0 & dreg { ccr = dreg; }
+:mov.b sreg,dreg is op8=0x0C; sreg & dreg { dreg = sreg; movflags(dreg); }
+:mov.w rs3,rd3 is op8=0x0D; b7=0 & rs3 & b3=0 & rd3 { rd3 = rs3; movflags(rd3); }
+:mov.b "#"imm8,dreg is op4=0xF & dreg; imm8 { dreg = imm8; movflags(dreg); }
+:mov.b @rs3,dreg is op8=0x68; b7=0 & rs3 & dreg { dreg = *:1 rs3; movflags(dreg); }
+:mov.b @(imm16,rs3),dreg is op8=0x6E; b7=0 & rs3 & dreg; imm16 { tmp = rs3 + imm16; dreg = *:1 tmp; movflags(dreg); }
+:mov.b @rs3+,dreg is op8=0x6C; b7=0 & rs3 & dreg { dreg = *:1 rs3; rs3 = rs3 + 1; movflags(dreg); }
+:mov.b imm8mem.b,dreg is op4=0x2 & dreg; imm8mem.b { dreg = imm8mem.b; movflags(dreg); }
+:mov.b imm16mem.b,dreg is op8=0x6A; hnyb=0 & dreg; imm16mem.b { dreg = imm16mem.b; movflags(dreg); }
+:mov.w "#"imm16,rd3 is op8=0x79; hnyb=0 & b3=0 & rd3; imm16 { rd3 = imm16; movflags(rd3); }
+:mov.w @rs3,rd3 is op8=0x69; b7=0 & rs3 & b3=0 & rd3 { rd3 = *:1 rs3; movflags(rd3); }
+:mov.w @(imm16,rs3),rd3 is op8=0x6F; b7=0 & rs3 & b3=0 & rd3; imm16 { tmp = rs3 + imm16; rd3 = *:2 tmp; movflags(rd3); }
+:mov.w @rs3+,rd3 is op8=0x6D; b7=0 & rs3 & b3=0 & rd3 { rd3 = *:2 rs3; rs3 = rs3 + 2; movflags(rd3); }
+:mov.w imm16mem.w,rd3 is op8=0x6B; hnyb=0 & b3=0 & rd3; imm16mem.w { rd3 = imm16mem.w; movflags(rd3); }
+:mov.b dreg,@rs3 is op8=0x68; b7=1 & rs3 & dreg { *:1 rs3 = dreg; movflags(dreg); }
+:mov.b dreg,@(imm16,rs3) is op8=0x6E; b7=1 & rs3 & dreg; imm16 { tmp = rs3 + imm16; *:1 tmp = dreg; movflags(dreg); }
+:mov.b dreg,@-rs3 is op8=0x6C; b7=1 & rs3 & dreg { rs3 = rs3 - 1; *:1 rs3 = dreg; movflags(dreg); }
+:mov.b dreg,imm8mem.b is op4=0x3 & dreg; imm8mem.b { imm8mem.b = dreg; movflags(dreg); }
+:mov.b dreg,imm16mem.b is op8=0x6A; hnyb=8 & dreg; imm16mem.b { imm16mem.b = dreg; movflags(dreg); }
+:mov.w rd3,@rs3 is op8=0x69; b7=1 & rs3 & b3=0 & rd3 { rd3 = *:1 rs3; movflags(rd3); }
+:mov.w rd3,@(imm16,rs3) is op8=0x6F; b7=1 & rs3 & b3=0 & rd3; imm16 { tmp = rs3 + imm16; rd3 = *:2 tmp; movflags(rd3); }
+:mov.w rd3,@-rs3 is op8=0x6D; b7=1 & rs3 & b3=0 & rd3 { rs3 = rs3 - 2; *:2 rs3 = rd3; movflags(rd3); }
+:mov.w rd3,imm16mem.w is op8=0x6B; hnyb=8 & b3=0 & rd3; imm16mem.w { imm16mem.w = rd3; movflags(rd3); }
+:movfpe imm16mem.b,dreg is op8=0x6A; hnyb=4 & dreg; imm16mem.b { dreg = imm16mem.b; movflags(dreg); }
+:movtpe dreg,imm16mem.b is op8=0x6A; hnyb=0xC & dreg; imm16mem.b { imm16mem.b = dreg; movflags(dreg); }
+
+:mulxu sreg,rd3 is op8=0x50; sreg & b3=0 & rd3 { rd3 = (rd3 & 0xFF) * zext(sreg); }
+:neg dreg is op8=0x17; op4=8 & dreg { subflags3(0,dreg); dreg = 0-dreg; resflags(dreg); }
+:nop is op8=0; op8=0 { ccr = ccr; }
+:not dreg is op8=0x17; op4=0 & dreg { dreg = ~dreg; movflags(dreg); }
+:or #imm8,dreg is op4=0xC & dreg; imm8 {
+	dreg = dreg | imm8;
+	movflags(dreg);
+}
+:or sreg,dreg is op8=0x14; sreg & dreg {
+	dreg = dreg | sreg;
+	movflags(dreg);
+}
+:orc "#"imm8,"ccr" is op8=0x04; imm8 { ccr = ccr | imm8; }
+:pop rd3 is op8=0x6D; op4=7 & b3=0 & rd3 { rd3 = *:2 sp; sp = sp + 2; movflags(rd3); }
+:push rd3 is op8=0x6D; op4=0xF & b3=0 & rd3 { sp = sp - 2; *:2 sp = rd3; movflags(rd3); }
 
 
 ############### DATA #############
@@ -405,7 +544,7 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 #:and.w RdFull,RrFull               is  {
 #	RdFull = RdFull & RrFull;
 #	$(Vflag) = 0;
-#	setResultFlags(RdFull);
+#	resflags(RdFull);
 #}
 
 
