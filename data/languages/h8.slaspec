@@ -17,9 +17,6 @@ define space register type=register_space size=2;
 define space address type=ram_space size=2;
 
 # Overlapping names for general registers
-#define register offset=0 size=4 [er0 er1 er2 er3 er4 er5 er6 sp];
-#define register offset=0 size=2 [e0 r0 e1 r1 e2 r2 e3 r3 e4 r4 e5 r5 e6 r6 e7 r7];
-#define register offset=0 size=1 [_ _ r0h r0l _ _ r1h r1l _ _ r2h r2l _ _ r3h r3l _ _ r4h r4l _ _ r5h r5l _ _ r6h r6l _ _ r7h r7l];
 define register offset=0 size=2 [r0 r1 r2 r3 r4 r5 r6 sp];
 define register offset=0 size=1 [r0h r0l r1h r1l r2h r2l r3h r3l r4h r4l r5h r5l r6h r6l r7h r7l];
 
@@ -65,35 +62,9 @@ define token ins3(24)
 # How is this implemented?!
 define pcodeop bcdAdjust;
 
-macro push2(val) {
-	*[register]:2 sp = val;
-	sp = sp-2;
-}
+macro push2(val) { sp = sp-2; *[register]:2 sp = val; }
 
-macro pop2(val) {
-	sp = sp+2;
-	val = *[register]:2 sp;
-}
-
-macro branch() {
-	sp = sp-4;
-	*:4 sp = inst_next;
-}
-
-macro branchret() {
-	sp = sp+4;
-	pc = *[register]:3 sp;
-}
-
-macro push4(val) {
-	*[register]:4 sp = val;
-	sp = sp-4;
-}
-
-macro pop4(val) {
-	sp = sp+4;
-	val = *[register]:4 sp;
-}
+macro pop2(val) { val = *[register]:2 sp; sp = sp+2; }
 
 macro resflags(result) {
 	$(Z_FLAG) = (result == 0);
@@ -187,13 +158,11 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 }
 :and #imm8,dreg is op4=0xE & dreg; imm8 {
 	dreg = dreg & imm8;
-	resflags(dreg);
-	$(V_FLAG) = 0;
+	movflags(dreg);
 }
 :and sreg,dreg is op8=0x16; sreg & dreg {
 	dreg = dreg & sreg;
-	resflags(dreg);
-	$(V_FLAG) = 0;
+	movflags(dreg);
 }
 :andc "#"imm8,"ccr" is op8=0x06; imm8 { ccr = ccr & imm8; }
 
@@ -377,8 +346,7 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 }
 
 :bsr pcoff8 is op8=0x55; pcoff8 {
-	sp = sp-2;
-	* sp = (&:2 inst_next);
+	push2(&:2 inst_next);
 	call pcoff8;
 }
 
@@ -443,18 +411,15 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	goto [addr8];
 }
 :jsr @rs3 is op8=0x5D; b7=0 & rs3 & lnyb=0 {
-	sp = sp-2;
-	* sp = (&:2 inst_next);
+	push2(&:2 inst_next);
 	call [rs3];
 }
 :jsr @addr16 is op8=0x5E; op8=0; addr16 {
-	sp = sp-2;
-	* sp = (&:2 inst_next);
+	push2(&:2 inst_next);
 	call addr16;
 }
 :jsr @@addr8 is op8=0x5F; addr8 {
-	sp = sp-2;
-	* sp = (&:2 inst_next);
+	push2(&:2 inst_next);
 	call [addr8];
 }
 
@@ -487,7 +452,7 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 
 :mulxu sreg,rd3 is op8=0x50; sreg & b3=0 & rd3 { rd3 = (rd3 & 0xFF) * zext(sreg); }
 :neg dreg is op8=0x17; op4=8 & dreg { subflags3(0,dreg); dreg = 0-dreg; resflags(dreg); }
-:nop is op8=0; op8=0 { ccr = ccr; }
+:nop is op8=0; op8=0 unimpl
 :not dreg is op8=0x17; op4=0 & dreg { dreg = ~dreg; movflags(dreg); }
 :or #imm8,dreg is op4=0xC & dreg; imm8 {
 	dreg = dreg | imm8;
@@ -498,98 +463,69 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	movflags(dreg);
 }
 :orc "#"imm8,"ccr" is op8=0x04; imm8 { ccr = ccr | imm8; }
-:pop rd3 is op8=0x6D; op4=7 & b3=0 & rd3 { rd3 = *:2 sp; sp = sp + 2; movflags(rd3); }
-:push rd3 is op8=0x6D; op4=0xF & b3=0 & rd3 { sp = sp - 2; *:2 sp = rd3; movflags(rd3); }
+:pop rd3 is op8=0x6D; op4=7 & b3=0 & rd3 { pop2(rd3); movflags(rd3); }
+:push rd3 is op8=0x6D; op4=0xF & b3=0 & rd3 { push2(rd3); movflags(rd3); }
 
+:rotl dreg is op8=0x12; op4=8 & dreg {
+	local c = dreg >> 7;
+	$(C_FLAG) = c;
+	dreg = (dreg << 1) | c;
+	movflags(dreg);
+}
+:rotr dreg is op8=0x13; op4=8 & dreg {
+	local c = dreg & 1;
+	$(C_FLAG) = c;
+	dreg = (c << 7) | (dreg >> 1);
+	movflags(dreg);
+}
+:rotxl dreg is op8=0x12; op4=0 & dreg {
+	local c = $(C_FLAG);
+	$(C_FLAG) = dreg >> 7;
+	dreg = (dreg << 1) | c;
+	movflags(dreg);
+}
+:rotxr dreg is op8=0x13; op4=0 & dreg {
+	local c = $(C_FLAG);
+	$(C_FLAG) = dreg & 1;
+	dreg = (c << 7) | (dreg >> 1);
+	movflags(dreg);
+}
+:rte is op8=0x56; op8=0x70 {
+	pop2(ccr); # CCR stored in both bytes of word
+	pop2(pc);
+	return [pc];
+}
+:rts is op8=0x54; op8=0x70 { pop2(pc); return [pc]; }
 
-############### DATA #############
-#:mov.i.w imm16_24,register_24             is opcode_24=0b0101 & operand_size_24=1 & register_24 & imm16_24
-#{
-#	register_24 = imm16_24;
-#}
-
-#:mov.e.b imm8_16,register_16             is opcode_16=0b0101 & operand_size_16=0 & register_16 & imm8_16
-#{
-#	register_16 = imm8_16;
-#}
-
-
-
-##################### BRANCH ####################
-#:pjsr    @address_24bit  is opcode1_32bit=0x03 & address_24bit
-#{
-#
-#	push(pc);
-#	pc = &address_24bit;
-#	call  [address_24bit:3];
-#}
-
-
-#:jsr    @address_24bit  is opcode1_32bit=0x01 & address_24bit
-#{
-#   	push(pc);
-#	pc = &address_24bit;
-#	call  [address_24bit:3];
-#}
-
-
-#:prts   is opcode_wholeword=0x1119
-#{
-#	pop(pc);
-#	return [pc];
-#}
-
-
-##################### LOGICAL OPERATIONS ####################
-#:and.w RdFull,RrFull               is  {
-#	RdFull = RdFull & RrFull;
-#	$(Vflag) = 0;
-#	resflags(RdFull);
-#}
-
-
-##################### SYSTEM CONTROL ####################
-#define pcodeop nop;
-#:nop is opcode_8=0x0 
-#{
-#	nop();
-#}
-#
-#
-#define pcodeop sleep;
-#:sleep is opcode_8=0b0011010 {
-#	sleep();
-#}
-#
-#
-#:link  is opcode_firstbyte=0x17 & immediate_value_byte
-#{
-#		r0 = r0;
-#}
-#
-#
-#:unlk is opcode_8=0x0f
-#{
-#	sp = fp;
-#	pop(sp);
-#}
-#
-#
-###################### ARITHMETIC OPERATIONS ####################
-#:extu.b is opcode_00_04=0b10100 & register_05_07 & opcode_08_15=0b00010010
-#{
-#		register_05_07 = register_05_07 ^ 0xFF ;
-#}
-#
-#
-#:cmp.i.w imm16_24,register_24             is opcode_24=0b0100 & operand_size_24=1 & register_24 & imm16_24
-#{
-#	#TODO
-#	register_24 = imm16_24;
-#}
-#
-#:cmp.e.b imm8_16,register_16             is opcode_16=0b0100 & operand_size_16=0 & register_16 & imm8_16
-#{
-#	#TODO
-#	register_16 = imm8_16;
-#}
+:shal dreg is op8=0x10; op4=8 & dreg {
+	$(V_FLAG) = dreg >> 7;
+	$(C_FLAG) = dreg >> 7;
+	dreg = dreg << 1;
+	resflags(dreg);
+}
+:shar dreg is op8=0x11; op4=8 & dreg {
+	$(C_FLAG) = dreg & 1;
+	dreg = dreg s>> 1;
+	movflags(dreg);
+}
+:shll dreg is op8=0x10; op4=0 & dreg {
+	$(C_FLAG) = dreg >> 7;
+	dreg = dreg << 1;
+	movflags(dreg);
+}
+:shlr dreg is op8=0x11; op4=0 & dreg {
+	$(C_FLAG) = dreg & 1;
+	dreg = dreg >> 1;
+	movflags(dreg);
+}
+:sleep is op8=0x01; op8=0x80 unimpl
+:stc "ccr",dreg is op8=0x02; hnyb=0 & dreg { dreg = ccr; }
+:sub.b sreg,dreg is op8=0x18; sreg & dreg { subflags3(dreg,sreg); dreg = dreg - sreg; resflags(dreg); }
+:sub.w rs3,rd3 is op8=0x19; b7=0 & rs3 & b3=0 & rd3 {subflags11(rd3,rs3); rd3 = rd3 - rs3; resflags(rd3); }
+:subs "#1",rd3 is op8=0x1B; op4=0 & b3=0 & rd3 { rd3 = rd3 - 1; }
+:subs "#2",rd3 is op8=0x1B; op4=8 & b3=0 & rd3 { rd3 = rd3 - 1; }
+:subx "#"imm8,dreg is op4=0xB & dreg; imm8 { local s = imm8 + $(C_FLAG); subflags3(dreg,s); dreg = dreg - s; resflags(dreg); }
+:subx sreg,dreg is op8=0x1E; sreg & dreg { local s = sreg + $(C_FLAG); subflags3(dreg,s); dreg = dreg - s; resflags(dreg); }
+:xor "#"imm8,dreg is op4=0xD & dreg; imm8 { dreg = dreg ^ imm8; movflags(dreg); }
+:xor sreg,dreg is op8=0x15; sreg & dreg { dreg = dreg ^ sreg; movflags(dreg); }
+:xorc "#"imm8,"ccr" is op8=0x05; imm8 { ccr = ccr ^ imm8; }
