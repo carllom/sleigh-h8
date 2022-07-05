@@ -66,8 +66,8 @@ attach variables [ rs3 rd3 ] [ r0 r1 r2 r3 r4 r5 r6 r7 ];
 
 # H8/300 instructions
 
-addr8: @addr8 is addr8 { export *:2 addr8; }
-addr16: @addr16 is addr16 { export *:2 addr16; }
+addr8: @imm8 is imm8 { export *:2 imm8; }
+addr16: @imm16 is imm16 { export *:2 imm16; }
 imm8mem.b: @imm8 is imm8 { export *:1 imm8; }
 imm16mem.b: @imm16 is imm16 { export *:1 imm16; }
 imm16mem.w: @imm16 is imm16 { export *:2 imm16; }
@@ -368,21 +368,21 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :jmp @rs3 is op8=0x59; b7=0 & rs3 & lnyb=0 {
 	goto [rs3];
 }
-:jmp @addr16 is op8=0x5A; op8=0; addr16 {
+:jmp addr16 is op8=0x5A; op8=0; addr16 {
 	goto addr16;
 }
-:jmp @@addr8 is op8=0x5B; addr8 {
+:jmp @addr8 is op8=0x5B; addr8 {
 	goto [addr8];
 }
 :jsr @rs3 is op8=0x5D; b7=0 & rs3 & lnyb=0 {
 	pushpc();
 	call [rs3];
 }
-:jsr @addr16 is op8=0x5E; op8=0; addr16 {
+:jsr addr16 is op8=0x5E; op8=0; addr16 {
 	pushpc();
 	call addr16;
 }
-:jsr @@addr8 is op8=0x5F; addr8 {
+:jsr @addr8 is op8=0x5F; addr8 {
 	pushpc();
 	call [addr8];
 }
