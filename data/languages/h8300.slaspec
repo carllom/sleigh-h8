@@ -1,0 +1,45 @@
+# About running SLEIGH: https://swarm.ptsecurity.com/creating-a-ghidra-processor-module-in-sleigh-using-v8-bytecode-as-an-example/
+# SLEIGH language: https://spinsel.dev/assets/2020-06-17-ghidra-brainfuck-processor-1/ghidra_docs/language_spec/html/sleigh_definitions.html
+
+# H8/300 reference: https://www.classes.cs.uchicago.edu/archive/2006/winter/23000-1/docs/h8300.pdf
+# H8/300H reference: http://www.bitsavers.org/components/hitachi/h8/H8_300H_Programming_Manual.pdf
+
+# ..\..\..\..\..\support\sleigh.bat h8.slaspec h8.sla
+
+define endian=big;
+define alignment=2;
+
+define space ram type=ram_space size=2 default;
+define space register type=register_space size=2;
+
+define space address type=ram_space size=2;
+
+# Overlapping names for general registers
+define register offset=0 size=2 [r0 r1 r2 r3 r4 r5 r6 r7];
+define register offset=0 size=1 [r0h r0l r1h r1l r2h r2l r3h r3l r4h r4l r5h r5l r6h r6l r7h r7l];
+
+define register offset=0x100 size=2 [pc];
+define register offset=0x200 size=1 [ccr];
+
+# CCR Flags
+@define I_FLAG   "ccr[7,1]"
+@define UI_FLAG  "ccr[6,1]"
+@define H_FLAG  "ccr[5,1]"
+@define U_FLAG  "ccr[4,1]"
+@define N_FLAG   "ccr[3,1]"
+@define Z_FLAG   "ccr[2,1]"
+@define V_FLAG   "ccr[1,1]"
+@define C_FLAG   "ccr[0,1]"
+
+@define SP "r7"
+
+macro pushpc() { r7 = r7-2; *[register]:2 r7 = &:2 inst_next; }
+macro poppc() { pc = *[register]:2 r7; r7 = r7+2; }
+macro poppcccr() { 
+  ccr = *[register]:2 r7; r7 = r7+2; # CCR stored in both bytes of word
+  pc = *[register]:2 r7; r7 = r7+2;
+}
+
+#@define asize "2"
+
+@include "h8300ins.sinc"
