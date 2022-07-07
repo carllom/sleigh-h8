@@ -7,29 +7,26 @@
 # * Extended addressing modes
 # * More instructions
 
+@define ADVANCED "1"
+
 define endian=big;
-
 define alignment=2;
-
 define space ram type=ram_space size=3 default;
 define space register type=register_space size=2;
-
-
 define space address type=ram_space size=3;
 
 # Overlapping names for general registers
 define register offset=0 size=4 [er0 er1 er2 er3 er4 er5 er6 er7];
 define register offset=0 size=2 [e0 r0 e1 r1 e2 r2 e3 r3 e4 r4 e5 r5 e6 r6 e7 r7];
 define register offset=0 size=1 [_ _ r0h r0l _ _ r1h r1l _ _ r2h r2l _ _ r3h r3l _ _ r4h r4l _ _ r5h r5l _ _ r6h r6l _ _ r7h r7l];
-
 define register offset=0x100 size=3 [pc];
 define register offset=0x200 size=1 [ccr];
 
 # CCR Flags
 @define I_FLAG   "ccr[7,1]"
 @define UI_FLAG  "ccr[6,1]"
-@define H_FLAG  "ccr[5,1]"
-@define U_FLAG  "ccr[4,1]"
+@define H_FLAG   "ccr[5,1]"
+@define U_FLAG   "ccr[4,1]"
 @define N_FLAG   "ccr[3,1]"
 @define Z_FLAG   "ccr[2,1]"
 @define V_FLAG   "ccr[1,1]"
@@ -40,13 +37,403 @@ define register offset=0x200 size=1 [ccr];
 # PC is stored on stack in lower 24 bits of 32 bit word.
 macro pushpc() { er7 = er7-4; *[register]:3 (er7+1) = &:3 inst_next; }
 macro poppc() { pc = *[register]:3 (er7+1); er7 = er7+4; }
+macro pushpcccr() { 
+  pushpc();
+  *[register]:1 er7 = ccr; # CCR stored in top byte of 32 bit word
+}
 macro poppcccr() { 
   ccr = *[register]:1 er7; # CCR stored in top byte of 32 bit word
-  pc = *[register]:3 (er7+1);
-  er7 = er7+4;
+  poppc();
+}
+
+macro subflags27(operand1,operand2) {
+  $(H_FLAG) = (operand1 & 0x0FFFFF) < (operand2 & 0x0FFFFF);
+  $(V_FLAG) = sborrow(operand1,operand2);
+  $(C_FLAG) = operand1 < operand2;
 }
 
 #@define asize "3"
 
 # object compatible with H8/300
+@include "h8300tok.sinc"
+
+define token hins1(8)
+  reg32hi=(4,6)
+  reg32lo=(0,2)
+  ccfldu=(4,7)
+  b67=(6,7)
+  trapn=(4,5)
+  xb7=(7,7)
+  xb3=(3,3)
+;
+
+define token hins2(16)
+  simm16=(0,15) signed
+;
+
+define token hins3(24)
+  op24=(0,23)
+  imm24=(0,23)
+;
+
+define token hins4(32)
+  imm32=(0,31)
+;
+
+
+attach variables [ reg32hi reg32lo ] [ er0 er1 er2 er3 er4 er5 er6 er7 ];
+
+@ifdef ADVANCED
+src_r3b1: reg32hi is b7=1 & reg32hi { export reg32hi; }
+src_r3b: reg32hi is b7=0 & reg32hi { export reg32hi; }
+dst_r3b: reg32lo is b3=0 & reg32lo { export reg32lo; }
+regind_src.b: @reg32hi is b7=0 & reg32hi { export *:1 reg32hi; }
+#regind_src.w: @reg32hi is b7=0 & reg32hi { export *:2 reg32hi; }
+@endif
+src_r32: reg32hi is b7=0 & reg32hi { export reg32hi; }
+dst_r32: reg32lo is b3=0 & reg32lo { export reg32lo; }
+src_r321: reg32hi is b7=1 & reg32hi { export reg32hi; }
+pcoff16: reloc is simm16 [ reloc=inst_next+simm16; ] { export *:3 reloc; }
+absaddr16.l: @imm16 is imm16 { export *:4 imm16; }
+absaddr24.b: @imm24 is imm24 { export *:1 imm24; }
+absaddr24.w: @imm24 is imm24 { export *:2 imm24; }
+absaddr24.l: @imm24 is imm24 { export *:4 imm24; }
+
+# object compatible with H8/300
 @include "h8300ins.sinc"
+
+cc2: "ra" is ccfldu=0 & lnyb=0 { export 1:1; }
+cc2: "rn" is ccfldu=1 & lnyb=0 { export 0:1; }
+cc2: "hi" is ccfldu=2 & lnyb=0 { tmp:1 = !($(C_FLAG) || $(Z_FLAG)); export tmp; }
+cc2: "ls" is ccfldu=3 & lnyb=0 { tmp:1 = $(C_FLAG) || $(Z_FLAG); export tmp; }
+cc2: "cc" is ccfldu=4 & lnyb=0 { tmp:1 = !$(C_FLAG); export tmp; }
+cc2: "cs" is ccfldu=5 & lnyb=0 { tmp:1 = $(C_FLAG); export tmp; }
+cc2: "ne" is ccfldu=6 & lnyb=0 { tmp:1 = !$(Z_FLAG); export tmp; }
+cc2: "eq" is ccfldu=7 & lnyb=0 { tmp:1 = $(Z_FLAG); export tmp; }
+cc2: "vc" is ccfldu=8 & lnyb=0 { tmp:1 = !$(V_FLAG); export tmp; }
+cc2: "vs" is ccfldu=9 & lnyb=0 { tmp:1 = $(V_FLAG); export tmp; }
+cc2: "pl" is ccfldu=10 & lnyb=0 { tmp:1 = !$(N_FLAG); export tmp; }
+cc2: "mi" is ccfldu=11 & lnyb=0 { tmp:1 = $(N_FLAG); export tmp; }
+cc2: "ge" is ccfldu=12 & lnyb=0 { tmp:1 = ($(V_FLAG)==$(N_FLAG)); export tmp; }
+cc2: "lt" is ccfldu=13 & lnyb=0 { tmp:1 = ($(V_FLAG)!=$(N_FLAG)); export tmp; }
+cc2: "gt" is ccfldu=14 & lnyb=0 { tmp:1 = !$(Z_FLAG) && ($(V_FLAG)==$(N_FLAG)); export tmp; }
+cc2: "le" is ccfldu=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
+
+
+:add.w #imm16,dst_r16 is op8=0x79; op4=1 & dst_r16; imm16 {
+  addflags(dst_r16, imm16);
+  dst_r16 = dst_r16 + imm16;
+  resflags(dst_r16);
+}
+:add.l #imm32,dst_r32 is op8=0x7A; op4=1 & dst_r32; imm32 {
+  addflags(dst_r32, imm32);
+  dst_r32 = dst_r32 + imm32;
+  resflags(dst_r32);
+}
+:add.l src_r321,dst_r32 is op8=0x0A; src_r321 & dst_r32 {
+  addflags(dst_r32, src_r321);
+  dst_r32 = dst_r32 + src_r321;
+  resflags(dst_r32);
+}
+:adds #4,dst_r3b is op8=0x0B; op4=9 & dst_r3b { dst_r3b = dst_r3b + 4; }
+
+:and.w #imm16,dst_r8 is op8=0x79; op4=6 & dst_r16; imm16 {
+	dst_r16 = dst_r16 & imm16;
+	movflags(dst_r16);
+}
+:and.w src_r16,dst_r16 is op8=0x66; src_r16 & dst_r16 {
+	dst_r16 = dst_r16 & src_r16;
+	movflags(dst_r16);
+}
+:and.l #imm32,dst_r32 is op8=0x7A; op4=6 & dst_r32; imm32 {
+	dst_r32 = dst_r32 & imm32;
+	movflags(dst_r32);
+}
+:and.l src_r32,dst_r32 is op24=0x01F066; src_r32 & dst_r32 {
+	dst_r32 = dst_r32 & src_r32;
+	movflags(dst_r32);
+}
+:b^cc2 pcoff16 is op8=0x58; cc2; pcoff16 {
+  if (cc2) goto pcoff16;
+}
+
+:bsr pcoff16 is op16=0x5C00; pcoff16 {
+	pushpc();
+	call pcoff16;
+}
+
+:cmp.w #imm16,dst_r16 is op8=0x79; op4=2 & dst_r16; imm16 {
+	subflags11(dst_r16, imm16);
+	resflags(dst_r16-imm16);
+}
+:cmp.l #imm32,dst_r32 is op8=0x7A; op4=2 & dst_r32; imm32 {
+	subflags11(dst_r32, imm32);
+	resflags(dst_r32-imm32);
+}
+:cmp.l src_r321,dst_r32 is op8=0x1F; src_r321 & dst_r32 {
+	subflags11(dst_r32, src_r321);
+	resflags(dst_r32-src_r321);
+}
+:dec.w #1,dst_r16 is op8=0x1B; hnyb=5 & dst_r16 {
+	$(V_FLAG) = dst_r16 == 0x8000;
+	dst_r16 = dst_r16 - 1;
+	resflags(dst_r16);
+}
+:dec.w #2,dst_r16 is op8=0x1B; hnyb=0xD & dst_r16 {
+	$(V_FLAG) = dst_r16 == 0x8000 | dst_r16 == 0x8001;
+	dst_r16 = dst_r16 - 2;
+	resflags(dst_r16);
+}
+:dec.l #1,dst_r32 is op8=0x1B; hnyb=7 & dst_r32 {
+	$(V_FLAG) = dst_r32 == 0x80000000;
+	dst_r32 = dst_r32 - 1;
+	resflags(dst_r32);
+}
+:dec.l #2,dst_r32 is op8=0x1B; hnyb=0xF & dst_r32 {
+	$(V_FLAG) = dst_r32 == 0x80000000 | dst_r32 == 0x80000001;
+	dst_r32 = dst_r32 - 2;
+	resflags(dst_r32);
+}
+
+:divxs.b src_r8,dst_r16 is op24=0x01D051; src_r8 & dst_r16 unimpl
+:divxs.w src_r16,dst_r32 is op24=0x01D053; src_r16 & dst_r32 unimpl
+
+:divxu.w src_r16,dst_r32 is op8=0x53; src_r16 & dst_r32 {
+	local rem = dst_r32 % sext(src_r16);
+	local quot = dst_r32 / sext(src_r16);
+	dst_r32 = rem << 16 | quot;
+	resflags(src_r16);
+}
+:eepmov.w is op16=0x7BD4; op16=0x598F {
+	if (r4l != 0) goto <end>;
+	<nextbyte>
+	*:2 er6 = *:2 er5;
+	er5 = er5 + 2;
+	er6 = er6 + 2;
+	r4 = r4 - 1;
+	if (r4 != 0) goto <nextbyte>;
+	<end>
+}
+:exts.w dst_r16 is op8=0x17; op4=0xD & dst_r16 {
+  dst_r16 = sext(dst_r16:1);
+  movflags(dst_r16);
+}
+:exts.l dst_r32 is op8=0x17; op4=0xF & dst_r32 {
+  dst_r32 = sext(dst_r32:2);
+  movflags(dst_r32);
+}
+:extu.w dst_r16 is op8=0x17; op4=0x5 & dst_r16 {
+  dst_r16 = zext(dst_r16:1);
+  movflags(dst_r16);
+}
+:extu.l dst_r32 is op8=0x17; op4=0xF & dst_r32 {
+  dst_r32 = zext(dst_r32:2);
+  movflags(dst_r32);
+}
+
+:inc.w #1,dst_r16 is op8=0x0B; hnyb=5 & dst_r16 {
+	$(V_FLAG) = dst_r16 == 0x7FFF;
+	dst_r16 = dst_r16 + 1;
+	resflags(dst_r16);
+}
+:inc.w #2,dst_r16 is op8=0x0B; hnyb=0xD & dst_r16 {
+	$(V_FLAG) = dst_r16 == 0x7FFF | dst_r16 == 0x7FFE;
+	dst_r16 = dst_r16 + 2;
+	resflags(dst_r16);
+}
+:inc.l #1,dst_r32 is op8=0x0B; hnyb=7 & dst_r32 {
+	$(V_FLAG) = dst_r32 == 0x80000000;
+	dst_r32 = dst_r32 + 1;
+	resflags(dst_r32);
+}
+:inc.l #2,dst_r32 is op8=0x0B; hnyb=0xF & dst_r32 {
+	$(V_FLAG) = dst_r32 == 0x7FFFFFFF | dst_r32 == 0x7FFFFFFE;
+	dst_r32 = dst_r32 + 2;
+	resflags(dst_r32);
+}
+
+# TODO: jmp/jsr impl totally different for absolute address
+
+:ldc.w @src_r32,"ccr" is op24=0x014069; src_r32 & lnyb=0 { ccr = *:1 src_r32; }
+:ldc.w @(imm16,src_r32),"ccr" is op24=0x01406F; src_r32 & lnyb=0; imm16 { tmp = src_r32 + imm16; ccr = *:1 tmp; }
+:ldc.w @(imm24,src_r32),"ccr" is op24=0x014078; src_r32 & lnyb=0; op24=0x6B2000; imm24 { tmp = src_r32 + imm24; ccr = *:1 tmp; }
+:ldc.w @src_r32+,"ccr" is op24=0x01406D; src_r32 & lnyb=0 { ccr = *:1 src_r32; src_r32 = src_r32 + 2; }
+:ldc.w absaddr16.w,"ccr" is op24=0x01406B; op8=0; absaddr16.w { ccr = absaddr16.w; }
+:ldc.w absaddr24.w,"ccr" is op24=0x01406B; op16=0x2000; absaddr24.w { ccr = absaddr24.w; }
+:mov.l src_r321,dst_r32 is op8=0x0F; src_r321 & dst_r32 { dst_r32 = src_r321; movflags(dst_r32); }
+:mov.b @(imm24,src_r32),dst_r8 is op8=0x78; src_r32 & lnyb=0; op8=0x6A; op4=2 & dst_r8; op8=0; imm24 { tmp = src_r32 + imm24; dst_r8 = *:1 tmp; movflags(dst_r8); }
+:mov.b absaddr24.b,dst_r8 is op8=0x6A; op4=2 & dst_r8; op8=0; absaddr24.b { dst_r8 = absaddr24.b; movflags(dst_r8); }
+:mov.w @(imm24,src_r32),dst_r16 is op8=0x78; src_r32 & lnyb=0; op8=0x6B; op4=2 & dst_r16; op8=0; imm24 { tmp = src_r32 + imm24; dst_r16 = *:2 tmp; movflags(dst_r16); }
+:mov.w absaddr24.w,dst_r16 is op8=0x6B; op4=2 & dst_r16; op8=0; absaddr24.w { dst_r16 = absaddr24.w; movflags(dst_r16); }
+:mov.l "#"imm32,dst_r32 is op8=0x7A; op4=0 & dst_r32; imm32 { dst_r32 = imm32; movflags(dst_r32); }
+:mov.l @src_r32,dst_r16 is op24=0x010069; src_r32 & dst_r32 { dst_r32 = *:4 src_r32; movflags(dst_r32); }
+:mov.l @(imm16,src_r32),dst_r32 is op24=0x01006F; src_r32 & dst_r32; imm16 { tmp = src_r32 + imm16; dst_r32 = *:4 tmp; movflags(dst_r32); }
+:mov.l @(imm24,src_r32),dst_r16 is op24=0x010078; src_r32 & lnyb=0; op8=0x6B; op4=2 & dst_r32; op8=0; imm24 { tmp = src_r32 + imm24; dst_r32 = *:4 tmp; movflags(dst_r32); }
+:mov.l @src_r32+,dst_r32 is op24=0x01006D; src_r32 & dst_r32 { dst_r32 = *:4 src_r32; src_r32 = src_r32 + 4; movflags(dst_r32); }
+:mov.l absaddr16.l,dst_r16 is op24=0x01006B; op4=0 & dst_r32; absaddr16.l { dst_r32 = absaddr16.l; movflags(dst_r32); }
+:mov.l absaddr24.l,dst_r32 is op24=0x01006B; op4=2 & dst_r32; op8=0; absaddr24.l { dst_r32 = absaddr24.l; movflags(dst_r32); }
+:mov.b dst_r8,@(imm24,src_r32) is op8=0x78; src_r32 & lnyb=0; op8=0x6A; op4=0xA & dst_r8; op8=0; imm24 { tmp = src_r32 + imm24; *:1 tmp = dst_r8; movflags(dst_r8); }
+:mov.b dst_r8,absaddr24.b is op8=0x6A; op4=0xA & dst_r8; op8=0; absaddr24.b { absaddr24.b = dst_r8; movflags(dst_r8); }
+:mov.w dst_r16,@(imm24,src_r32) is op8=0x78; src_r32 & lnyb=0; op8=0x6B; op4=0xA & dst_r16; op8=0; imm24 { tmp = src_r32 + imm24; *:2 tmp = dst_r16; movflags(dst_r16); }
+:mov.w dst_r16,absaddr24.w is op8=0x6B; op4=0xA & dst_r16; op8=0; absaddr24.w { absaddr24.w = dst_r16; movflags(dst_r16); }
+:mov.l dst_r16,@src_r321 is op24=0x010069; src_r321 & dst_r32 { *:4 src_r321 = dst_r32; movflags(dst_r32); }
+:mov.l dst_r32,@(imm16,src_r321) is op24=0x01006F; src_r321 & dst_r32; imm16 { tmp = src_r321 + imm16; *:4 tmp = dst_r32; movflags(dst_r32); }
+:mov.l dst_r16,@(imm24,src_r321) is op24=0x010078; src_r321 & lnyb=0; op8=0x6B; op4=0xA & dst_r32; op8=0; imm24 { tmp = src_r321 + imm24; *:4 tmp = dst_r32; movflags(dst_r32); }
+:mov.l dst_r32,@-src_r321 is op24=0x01006D; src_r321 & dst_r32 { src_r321 = src_r321 - 4; *:4 src_r321 = dst_r32; movflags(dst_r32); }
+:mov.l dst_r16,absaddr16.l is op24=0x01006B; op4=8 & dst_r32; absaddr16.l { absaddr16.l = dst_r32; movflags(dst_r32); }
+:mov.l dst_r32,absaddr24.l is op24=0x01006B; op4=0xA & dst_r32; op8=0; absaddr24.l { absaddr24.l = dst_r32; movflags(dst_r32); }
+
+:mulxs.b src_r8,dst_r16 is op24=0x01C050; src_r8 & dst_r16 unimpl
+:mulxs.w src_r16,dst_r32 is op24=0x01C052; src_r16 & dst_r32 unimpl
+:mulxu.w src_r16,dst_r32 is op8=0x52; src_r16 & dst_r32 { dst_r32 = (dst_r32 & 0xFFFF) * zext(src_r16); }
+:neg.w dst_r16 is op8=0x17; op4=9 & dst_r16 { subflags11(0,dst_r16); dst_r16 = -dst_r16; resflags(dst_r16); }
+:neg.l dst_r32 is op8=0x17; op4=0xB & dst_r32 { subflags11(0,dst_r32); dst_r32 = -dst_r32; resflags(dst_r32); }
+:not.w dst_r16 is op8=0x17; op4=1 & dst_r16 { dst_r16 = ~dst_r16; movflags(dst_r16); }
+:not.l dst_r32 is op8=0x17; op4=3 & dst_r32 { dst_r32 = ~dst_r32; movflags(dst_r32); }
+:or.w #imm16,dst_r16 is op8=0x79; op4=4 & dst_r16; imm16 {
+	dst_r16 = dst_r16 | imm16;
+	movflags(dst_r16);
+}
+:or.w src_r16,dst_r16 is op8=0x64; src_r16 & dst_r16 {
+	dst_r16 = dst_r16 | src_r16;
+	movflags(dst_r16);
+}
+:or.l #imm32,dst_r32 is op8=0x7A; op4=4 & dst_r32; imm32 {
+	dst_r32 = dst_r32 | imm32;
+	movflags(dst_r32);
+}
+:or.l src_r32,dst_r32 is op24=0x01F064; src_r32 & dst_r32 {
+	dst_r32 = dst_r32 | src_r32;
+	movflags(dst_r32);
+}
+
+:pop.l dst_r32 is op24=0x01006D; op4=7 & dst_r32 { dst_r32 = *$(SP); $(SP) = $(SP)+4; movflags(dst_r32); }
+:push.l dst_r32 is op24=0x01006D; op4=0xF & dst_r32 { $(SP) = $(SP)-4; *$(SP) = dst_r32; movflags(dst_r32); }
+:rotl.w dst_r16 is op8=0x12; op4=9 & dst_r16 {
+	local c = dst_r16 >> 15;
+	$(C_FLAG) = c;
+	dst_r16 = (dst_r16 << 1) | c;
+	movflags(dst_r16);
+}
+:rotl.l dst_r32 is op8=0x12; op4=0xB & dst_r32 {
+	local c = dst_r32 >> 31;
+	$(C_FLAG) = c;
+	dst_r32 = (dst_r32 << 1) | c;
+	movflags(dst_r32);
+}
+:rotr.w dst_r16 is op8=0x13; op4=9 & dst_r16 {
+	local c = dst_r16 & 1;
+	$(C_FLAG) = c;
+	dst_r16 = (c << 15) | (dst_r16 >> 1);
+	movflags(dst_r16);
+}
+:rotr.l dst_r32 is op8=0x13; op4=0xB & dst_r32 {
+	local c = dst_r32 & 1;
+	$(C_FLAG) = c;
+	dst_r32 = (c << 31) | (dst_r32 >> 1);
+	movflags(dst_r32);
+}
+:rotxl.w dst_r16 is op8=0x12; op4=1 & dst_r16 {
+	local c = $(C_FLAG);
+	$(C_FLAG) = dst_r16 >> 15;
+	dst_r16 = (dst_r16 << 1) | c;
+	movflags(dst_r16);
+}
+:rotxl.l dst_r32 is op8=0x12; op4=3 & dst_r32 {
+	local c = $(C_FLAG);
+	$(C_FLAG) = dst_r32 >> 31;
+	dst_r32 = (dst_r32 << 1) | c;
+	movflags(dst_r32);
+}
+:rotxr.w dst_r16 is op8=0x13; op4=1 & dst_r16 {
+	local c = $(C_FLAG);
+	$(C_FLAG) = dst_r16 & 1;
+	dst_r16 = (c << 15) | (dst_r16 >> 1);
+	movflags(dst_r16);
+}
+:rotxr.w dst_r32 is op8=0x13; op4=3 & dst_r32 {
+	local c = $(C_FLAG);
+	$(C_FLAG) = dst_r32 & 1;
+	dst_r32 = (c << 31) | (dst_r32 >> 1);
+	movflags(dst_r32);
+}
+
+:shal.w dst_r16 is op8=0x10; op4=9 & dst_r16 {
+	$(V_FLAG) = dst_r16 >> 15;
+	$(C_FLAG) = dst_r16 >> 15;
+	dst_r16 = dst_r16 << 1;
+	resflags(dst_r16);
+}
+:shal.l dst_r32 is op8=0x10; op4=0xB & dst_r32 {
+	$(V_FLAG) = dst_r32 >> 31;
+	$(C_FLAG) = dst_r32 >> 31;
+	dst_r32 = dst_r32 << 1;
+	resflags(dst_r32);
+}
+:shar.w dst_r16 is op8=0x11; op4=9 & dst_r16 {
+	$(C_FLAG) = dst_r16 & 1;
+	dst_r16 = dst_r16 s>> 1;
+	movflags(dst_r16);
+}
+:shar.l dst_r32 is op8=0x11; op4=0xB & dst_r32 {
+	$(C_FLAG) = dst_r32 & 1;
+	dst_r32 = dst_r32 s>> 1;
+	movflags(dst_r32);
+}
+:shll.w dst_r16 is op8=0x10; op4=1 & dst_r16 {
+	$(C_FLAG) = dst_r16 >> 15;
+	dst_r16 = dst_r16 << 1;
+	movflags(dst_r16);
+}
+:shll.l dst_r32 is op8=0x10; op4=3 & dst_r32 {
+	$(C_FLAG) = dst_r32 >> 31;
+	dst_r32 = dst_r32 << 1;
+	movflags(dst_r32);
+}
+:shlr.w dst_r16 is op8=0x11; op4=1 & dst_r16 {
+	$(C_FLAG) = dst_r16 & 1;
+	dst_r16 = dst_r16 >> 1;
+	movflags(dst_r16);
+}
+:shlr.l dst_r32 is op8=0x11; op4=3 & dst_r32 {
+	$(C_FLAG) = dst_r32 & 1;
+	dst_r32 = dst_r32 >> 1;
+	movflags(dst_r32);
+}
+:stc.w "ccr",@src_r321 is op24=0x014069; src_r321 & lnyb=0 { *:1 src_r321 = ccr; }
+:stc.w "ccr",@(imm16,src_r321) is op24=0x01406F; src_r321 & lnyb=0; imm16 { tmp = src_r321 + imm16; *:1 tmp = ccr; }
+:stc.w "ccr",@(imm24,src_r32) is op24=0x014078; src_r32 & lnyb=0; op24=0x6BA000; imm24 { tmp = src_r32 + imm24; *:1 tmp = ccr; }
+:stc.w "ccr",@-src_r321 is op24=0x01406D; src_r321 & lnyb=0 { src_r321 = src_r321-2; *:1 src_r321 = ccr; }
+:stc.w "ccr",absaddr16.w is op24=0x01406B; op8=0x80; absaddr16.w { absaddr16.w = ccr; }
+:stc.w "ccr",absaddr24.w is op24=0x01406B; op16=0xA000; imm24 { absaddr24.w = zext(ccr); }
+
+:sub.w #imm16,dst_r16 is op8=0x79; op4=3 & dst_r16; imm16 {
+  subflags11(dst_r16,imm16);
+  dst_r16 = dst_r16 - imm16;
+  resflags(dst_r16);
+}
+:sub.l #imm32,dst_r32 is op8=0x7A; op4=3 & dst_r32; imm32 {
+  subflags27(dst_r32, imm32);
+  dst_r32 = dst_r32 - imm32;
+  resflags(dst_r32);
+}
+:sub.l src_r321,dst_r32 is op8=0x1A; src_r321 & dst_r32 {
+  subflags27(dst_r32, src_r321);
+  dst_r32 = dst_r32 - src_r321;
+  resflags(dst_r32);
+}
+:subs #4,dst_r32 is op8=0x1B; op4=9 & dst_r32 { dst_r32 = dst_r32 - 4; }
+
+:xor.w "#"imm16,dst_r16 is op8=0x79; op4=0x5 & dst_r16; imm16 { dst_r16 = dst_r16 ^ imm16; movflags(dst_r16); }
+:xor.w src_r16,dst_r16 is op8=0x65; src_r16 & dst_r16 { dst_r16 = dst_r16^ src_r16; movflags(dst_r16); }
+:xor.l "#"imm32,dst_r32 is op8=0x7A; op4=0x5 & dst_r32; imm32 { dst_r32 = dst_r32 ^ imm32; movflags(dst_r32); }
+:xor.l src_r32,dst_r32 is op24=0x01F065; src_r32 & dst_r32 { dst_r32 = dst_r32 ^ src_r32; movflags(dst_r32); }
+:xorc "#"imm8,"ccr" is op8=0x05; imm8 { ccr = ccr ^ imm8; }
+
+:trapa "#"trapn is op8=0x57; b67=0 & trapn & lnyb=0 {
+  pushpcccr();
+  $(I_FLAG) = 1;
+  # vec:3 = *:2 0x10 + (trapn * 2);
+  # vec = vec << 1;
+  # call [vec];
+}

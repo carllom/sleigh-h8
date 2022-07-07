@@ -42,4 +42,5 @@ macro poppcccr() {
 
 #@define asize "2"
 
+@include "h8300tok.sinc"
 @include "h8300ins.sinc"

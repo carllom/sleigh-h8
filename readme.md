@@ -64,3 +64,5 @@ Check half-carry in ccr macro - what if it is word (bit11) or longword (bit??) o
 carry (C) or scarry/overflow(V) uses built in functions - is OK?
 
 ~! match 0 bits, sometimes they do matter (band, biand) - go through all instructions and fill in 0-bits~
+
+Use more `@define`s? Use300H, UseAdvanced

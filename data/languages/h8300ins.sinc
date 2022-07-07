@@ -1,36 +1,6 @@
 # H8/300 instruction set
 # reference: https://www.classes.cs.uchicago.edu/archive/2006/winter/23000-1/docs/h8300.pdf
 
-define token ins1(8)
-	op4=(4,7)
-	op8=(0,7)
-
-	reg8hi=(4,7)
-	reg8lo=(0,3)
-	reg16hi=(4,6)
-	reg16lo=(0,2)
-	reg3hi=(4,6)
-	reg3lo=(0,2)
-
-	imm8=(0,7)
-	simm8=(0,7) signed
-	imm4=(0,3)
-
-	invert=(7,7)
-	bit=(4,6)
-	ccfld=(0,3)
-
-	b3=(3,3)
-	b7=(7,7)
-	lnyb=(0,3)
-	hnyb=(4,7)
-;
-
-define token ins2(16)
-	op16=(0,15)
-	imm16=(0,15)
-;
-
 # How is this implemented?!
 define pcodeop bcdAdjust;
 
@@ -86,6 +56,10 @@ dst_r16: reg16lo is b3=0 & reg16lo { export reg16lo; }
 src_r3b1: reg16hi is b7=1 & reg16hi { export reg16hi; }
 src_r3b: reg3hi is b7=0 & reg3hi { export reg3hi; }
 dst_r3b: reg3lo is b3=0 & reg3lo { export reg3lo; }
+
+regind_src.b: @reg3hi is b7=0 & reg3hi { export *:1 reg3hi; }
+#regind_src.w: @reg3hi is b7=0 & reg3hi { export *:2 reg3hi; }
+
 @endif
 
 cc: "ra" is ccfld=0 { export 1:1; }
@@ -153,8 +127,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	local rbit = (dst_r8 >> bit) & 1;
 	$(C_FLAG) = $(C_FLAG) & rbit;
 }
-:band #bit,@src_r3b is op8=0x7C; src_r3b & lnyb=0; op8=0x76; invert=0 & bit & lnyb=0 { 
-	$(C_FLAG) = $(C_FLAG) & ((* src_r3b) >> bit);
+:band #bit,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x76; invert=0 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) & ((regind_src.b) >> bit);
 }
 :band #bit,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x76; invert=0 & bit & lnyb=0 {
 	$(C_FLAG) = $(C_FLAG) & (absaddr8.b >> bit);
@@ -162,8 +136,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :bclr #bit,dst_r8 is op8=0x72; invert=0 & bit & dst_r8 {
 	dst_r8 = dst_r8 & ~(1 << bit);
 }
-:bclr #bit,@src_r3b is op8=0x7D; src_r3b & lnyb=0; op8=0x72; invert=0 & bit & lnyb=0 {
-	* src_r3b = (*:1 src_r3b) & ~(1 << bit);
+:bclr #bit,regind_src.b is op8=0x7D; regind_src.b & lnyb=0; op8=0x72; invert=0 & bit & lnyb=0 {
+	regind_src.b = regind_src.b & ~(1 << bit);
 }
 :bclr #bit,absaddr8.b is op8=0x7F; absaddr8.b; op8=0x72; invert=0 & bit & lnyb=0 {
 	absaddr8.b = absaddr8.b &  ~(1 << bit);
@@ -171,8 +145,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :bclr src_r8,dst_r8 is op8=0x62; src_r8 & dst_r8 {
 	dst_r8 = dst_r8 & ~(1 << (src_r8 & 7));
 }
-:bclr src_r8,@src_r3b is op8=0x7D; src_r3b & lnyb=0; op8=0x62; src_r8 & lnyb=0 {
-	* src_r3b = (*:1 src_r3b) & ~(1 << (src_r8 & 7));
+:bclr src_r8,regind_src.b is op8=0x7D; regind_src.b & lnyb=0; op8=0x62; src_r8 & lnyb=0 {
+	regind_src.b = regind_src.b & ~(1 << (src_r8 & 7));
 }
 :bclr src_r8,absaddr8.b is op8=0x7F; absaddr8.b; op8=0x62; src_r8 & lnyb=0 {
 	absaddr8.b = absaddr8.b &  ~(1 << (src_r8 & 7));
@@ -181,8 +155,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	local rbit = ~((dst_r8 >> bit) & 1);
 	$(C_FLAG) = $(C_FLAG) & rbit;
 }
-:biand #bit,@src_r3b is op8=0x7C; src_r3b & lnyb=0; op8=0x76; invert=1 & bit & lnyb=0 { 
-	$(C_FLAG) = $(C_FLAG) & ~((* src_r3b) >> bit);
+:biand #bit,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x76; invert=1 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) & ~(regind_src.b >> bit);
 }
 :biand #bit,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x76; invert=1 & bit & lnyb=0 {
 	$(C_FLAG) = $(C_FLAG) & ~(absaddr8.b >> bit);
@@ -190,8 +164,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :bild #bit,dst_r8 is op8=0x77; invert=1 & bit & dst_r8 {
 	$(C_FLAG) = ~((dst_r8 >> bit) & 1);
 }
-:bild #bit,@src_r3b is op8=0x7C; src_r3b & lnyb=0; op8=0x77; invert=1 & bit & lnyb=0 { 
-	$(C_FLAG) = ~((* src_r3b) >> bit);
+:bild #bit,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x77; invert=1 & bit & lnyb=0 { 
+	$(C_FLAG) = ~(regind_src.b >> bit);
 }
 :bild #bit,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x77; invert=1 & bit & lnyb=0 {
 	$(C_FLAG) = ~(absaddr8.b >> bit);
@@ -200,8 +174,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	local rbit = ~((dst_r8 >> bit) & 1);
 	$(C_FLAG) = $(C_FLAG) | rbit;
 }
-:bior #bit,@src_r3b is op8=0x7C; src_r3b & lnyb=0; op8=0x74; invert=1 & bit & lnyb=0 { 
-	$(C_FLAG) = $(C_FLAG) | ~((* src_r3b) >> bit);
+:bior #bit,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x74; invert=1 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) | ~(regind_src.b >> bit);
 }
 :bior #bit,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x74; invert=1 & bit & lnyb=0 {
 	$(C_FLAG) = $(C_FLAG) | ~(absaddr8.b >> bit);
@@ -210,9 +184,9 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	local masked = dst_r8 & ~(1 << bit);
 	dst_r8 = masked | (~$(C_FLAG) << bit);
 }
-:bist #bit,@src_r3b is op8=0x7D; src_r3b & lnyb=0; op8=0x67; invert=1 & bit & lnyb=0 {
-	local masked = (*:1 src_r3b) & ~(1 << bit);
-	* src_r3b = masked | (~$(C_FLAG) << bit);
+:bist #bit,regind_src.b is op8=0x7D; regind_src.b & lnyb=0; op8=0x67; invert=1 & bit & lnyb=0 {
+	local masked = regind_src.b & ~(1 << bit);
+	regind_src.b = masked | (~$(C_FLAG) << bit);
 }
 :bist #bit,absaddr8.b is op8=0x7F; absaddr8.b; op8=0x67; invert=1 & bit & lnyb=0 {
 	local masked = absaddr8.b &  ~(1 << bit);
@@ -222,8 +196,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	local rbit = ~((dst_r8 >> bit) & 1);
 	$(C_FLAG) = $(C_FLAG) ^ rbit;
 }
-:bixor #bit,@src_r3b is op8=0x7C; src_r3b & lnyb=0; op8=0x75; invert=1 & bit & lnyb=0 { 
-	$(C_FLAG) = $(C_FLAG) ^ ~((* src_r3b) >> bit);
+:bixor #bit,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x75; invert=1 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) ^ ~(regind_src.b >> bit);
 }
 :bixor #bit,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x75; invert=1 & bit & lnyb=0 {
 	$(C_FLAG) = $(C_FLAG) ^ ~(absaddr8.b >> bit);
@@ -231,8 +205,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :bld #bit,dst_r8 is op8=0x77; invert=0 & bit & dst_r8 {
 	$(C_FLAG) = ((dst_r8 >> bit) & 1);
 }
-:bld #bit,@src_r3b is op8=0x7C; src_r3b & lnyb=0; op8=0x77; invert=0 & bit & lnyb=0 { 
-	$(C_FLAG) = ((* src_r3b) >> bit);
+:bld #bit,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x77; invert=0 & bit & lnyb=0 { 
+	$(C_FLAG) = (regind_src.b >> bit);
 }
 :bld #bit,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x77; invert=0 & bit & lnyb=0 {
 	$(C_FLAG) = (absaddr8.b >> bit);
@@ -240,8 +214,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :bnot #bit,dst_r8 is op8=0x71; invert=0 & bit & dst_r8 {
 	dst_r8 = dst_r8 ^ (1<<bit);
 }
-:bnot #bit,@src_r3b is op8=0x7D; src_r3b & lnyb=0; op8=0x71; invert=0 & bit & lnyb=0 {
-	* src_r3b = (*:1 src_r3b) ^ (1 << bit);
+:bnot #bit,regind_src.b is op8=0x7D; regind_src.b & lnyb=0; op8=0x71; invert=0 & bit & lnyb=0 {
+	regind_src.b = regind_src.b ^ (1 << bit);
 }
 :bnot #bit,absaddr8.b is op8=0x7F; absaddr8.b; op8=0x71; invert=0 & bit & lnyb=0 {
 	absaddr8.b = absaddr8.b ^ (1<<bit);
@@ -249,8 +223,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :bnot src_r8,dst_r8 is op8=0x61; src_r8 & dst_r8 {
 	dst_r8 = dst_r8 ^ (1<<(src_r8&7));
 }
-:bnot src_r8,@src_r3b is op8=0x7D; src_r3b & lnyb=0; op8=0x61; src_r8 & lnyb=0 {
-	* src_r3b = (*:1 src_r3b) ^ (1<<(src_r8&7));
+:bnot src_r8,regind_src.b is op8=0x7D; regind_src.b & lnyb=0; op8=0x61; src_r8 & lnyb=0 {
+	regind_src.b = regind_src.b ^ (1<<(src_r8&7));
 }
 :bnot src_r8,absaddr8.b is op8=0x7F; absaddr8.b; op8=0x61; src_r8 & lnyb=0 {
 	absaddr8.b = absaddr8.b ^ (1<<(src_r8&7));
@@ -259,8 +233,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	local rbit = ((dst_r8 >> bit) & 1);
 	$(C_FLAG) = $(C_FLAG) | rbit;
 }
-:bor #bit,@src_r3b is op8=0x7C; src_r3b & lnyb=0; op8=0x74; invert=0 & bit & lnyb=0 { 
-	$(C_FLAG) = $(C_FLAG) | ((* src_r3b) >> bit);
+:bor #bit,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x74; invert=0 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) | (regind_src.b >> bit);
 }
 :bor #bit,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x74; invert=0 & bit & lnyb=0 {
 	$(C_FLAG) = $(C_FLAG) | (absaddr8.b >> bit);
@@ -268,8 +242,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :bset #bit,dst_r8 is op8=0x70; invert=0 & bit & dst_r8 {
 	dst_r8 = dst_r8 | (1 << bit);
 }
-:bset #bit,@src_r3b is op8=0x7D; src_r3b & lnyb=0; op8=0x70; invert=0 & bit & lnyb=0 {
-	* src_r3b = (*:1 src_r3b) | (1 << bit);
+:bset #bit,regind_src.b is op8=0x7D; regind_src.b & lnyb=0; op8=0x70; invert=0 & bit & lnyb=0 {
+	regind_src.b = regind_src.b | (1 << bit);
 }
 :bset #bit,absaddr8.b is op8=0x7F; absaddr8.b; op8=0x70; invert=0 & bit & lnyb=0 {
 	absaddr8.b = absaddr8.b | (1 << bit);
@@ -277,8 +251,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :bset src_r8,dst_r8 is op8=0x60; src_r8 & dst_r8 {
 	dst_r8 = dst_r8 | (1 << (src_r8 & 7));
 }
-:bset src_r8,@src_r3b is op8=0x7D; src_r3b & lnyb=0; op8=0x60; src_r8 & lnyb=0 {
-	* src_r3b = (*:1 src_r3b) | (1 << (src_r8 & 7));
+:bset src_r8,regind_src.b is op8=0x7D; regind_src.b & lnyb=0; op8=0x60; src_r8 & lnyb=0 {
+	regind_src.b = regind_src.b | (1 << (src_r8 & 7));
 }
 :bset src_r8,absaddr8.b is op8=0x7F; absaddr8.b; op8=0x60; src_r8 & lnyb=0 {
 	absaddr8.b = absaddr8.b | (1 << (src_r8 & 7));
@@ -287,9 +261,9 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	local masked = dst_r8 & ~(1 << bit);
 	dst_r8 = masked | ($(C_FLAG) << bit);
 }
-:bst #bit,@src_r3b is op8=0x7D; src_r3b & lnyb=0; op8=0x67; invert=0 & bit & lnyb=0 {
-	local masked = (*:1 src_r3b) & ~(1 << bit);
-	* src_r3b = masked | ($(C_FLAG) << bit);
+:bst #bit,regind_src.b is op8=0x7D; regind_src.b & lnyb=0; op8=0x67; invert=0 & bit & lnyb=0 {
+	local masked = regind_src.b & ~(1 << bit);
+	regind_src.b = masked | ($(C_FLAG) << bit);
 }
 :bst #bit,absaddr8.b is op8=0x7F; absaddr8.b; op8=0x67; invert=0 & bit & lnyb=0 {
 	local masked = absaddr8.b &  ~(1 << bit);
@@ -298,8 +272,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :btst #bit,dst_r8 is op8=0x73; invert=0 & bit & dst_r8 {
 	$(Z_FLAG) = ~(dst_r8 >> bit) & 1;
 }
-:btst #bit,@src_r3b is op8=0x7C; src_r3b & lnyb=0; op8=0x73; invert=0 & bit & lnyb=0 {
-	$(Z_FLAG) = ~((*:1 src_r3b) >> bit) & 1;
+:btst #bit,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x73; invert=0 & bit & lnyb=0 {
+	$(Z_FLAG) = ~(regind_src.b >> bit) & 1;
 }
 :btst #bit,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x73; invert=0 & bit & lnyb=0 {
 	$(Z_FLAG) = ~(absaddr8.b >> bit) & 1;
@@ -307,8 +281,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :btst src_r8,dst_r8 is op8=0x63; src_r8 & dst_r8 {
 	$(Z_FLAG) = ~(dst_r8 >> (src_r8 & 7)) & 1;
 }
-:btst src_r8,@src_r3b is op8=0x7C; src_r3b & lnyb=0; op8=0x63; src_r8 & lnyb=0 {
-	$(Z_FLAG) = ~((*:1 src_r3b) >> (src_r8 & 7)) & 1;
+:btst src_r8,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x63; src_r8 & lnyb=0 {
+	$(Z_FLAG) = ~(regind_src.b >> (src_r8 & 7)) & 1;
 }
 :btst src_r8,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x63; src_r8 & lnyb=0 {
 	$(Z_FLAG) = ~(absaddr8.b >> (src_r8 & 7)) & 1;
@@ -317,8 +291,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	local rbit = ((dst_r8 >> bit) & 1);
 	$(C_FLAG) = $(C_FLAG) ^ rbit;
 }
-:bxor #bit,@src_r3b is op8=0x7C; src_r3b & lnyb=0; op8=0x75; invert=0 & bit & lnyb=0 { 
-	$(C_FLAG) = $(C_FLAG) ^ ((* src_r3b) >> bit) & 1;
+:bxor #bit,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x75; invert=0 & bit & lnyb=0 { 
+	$(C_FLAG) = $(C_FLAG) ^ (regind_src.b >> bit) & 1;
 }
 :bxor #bit,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x75; invert=0 & bit & lnyb=0 {
 	$(C_FLAG) = $(C_FLAG) ^ (absaddr8.b >> bit) & 1;
@@ -380,8 +354,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	resflags(dst_r8);
 }
 
-:jmp @src_r3b is op8=0x59; src_r3b & lnyb=0 {
-	goto [src_r3b];
+:jmp regind_src.b is op8=0x59; regind_src.b & lnyb=0 {
+	goto regind_src.b;
 }
 :jmp addr16 is op8=0x5A; op8=0; addr16 {
 	goto addr16;
@@ -389,9 +363,9 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :jmp @addr8 is op8=0x5B; addr8 {
 	goto [addr8];
 }
-:jsr @src_r3b is op8=0x5D; src_r3b & lnyb=0 {
+:jsr regind_src.b is op8=0x5D; regind_src.b & lnyb=0 {
 	pushpc();
-	call [src_r3b];
+	call regind_src.b;
 }
 :jsr addr16 is op8=0x5E; op8=0; addr16 {
 	pushpc();
