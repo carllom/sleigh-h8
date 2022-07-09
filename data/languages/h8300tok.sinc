@@ -1,0 +1,43 @@
+define token ins1(8)
+	op4=(4,7)
+	op8=(0,7)
+
+	reg8hi=(4,7)
+	reg8lo=(0,3)
+
+@ifdef ADVANCED
+    reg16hi=(4,7)
+    reg16lo=(0,3)
+@else
+	reg16hi=(4,6)
+	reg16lo=(0,2)
+@endif
+	reg3hi=(4,6)
+	reg3lo=(0,2)
+
+	imm8=(0,7)
+	simm8=(0,7) signed
+	imm4=(0,3)
+
+	invert=(7,7)
+	bit=(4,6)
+	ccfld=(0,3)
+
+	b3=(3,3)
+	b7=(7,7)
+	lnyb=(0,3)
+	hnyb=(4,7)
+@ifdef ADVANCED
+    reg32hi=(4,6)
+    reg32lo=(0,2)
+
+    b67=(6,7)
+    trapn=(4,5)
+@endif
+;
+
+define token ins2(16)
+    b15=(15,15)
+	op16=(0,15)
+	imm16=(0,15)
+;

@@ -57,6 +57,10 @@ H8/300H has added:
 
 [https://spinsel.dev/assets/2020-06-17-ghidra-brainfuck-processor-1/ghidra_docs/language_spec/html/sleigh_definitions.html](SLEIGH specification)
 
+[https://trenchant.io/expanding-the-dragon-adding-an-isa-to-ghidra/](An easier introduction to SLEIGH definitions)
+
+[https://swarm.ptsecurity.com/creating-a-ghidra-processor-module-in-sleigh-using-v8-bytecode-as-an-example/](Step-by-step walkthrough of implementing a model (so-so))
+
 ## TODOs
 
 Check half-carry in ccr macro - what if it is word (bit11) or longword (bit??) op? How to distinguish size of input variables? Or different macros for different sizes?

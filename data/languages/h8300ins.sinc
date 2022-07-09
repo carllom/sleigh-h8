@@ -35,24 +35,29 @@ macro subflags11(operand1,operand2) {
 }
 
 # maps register names to fields
-attach variables [ reg8hi reg8lo ] [ r0l r1l r2l r3l r4l r5l r6l r7l r0h r1h r2h r3h r4h r5h r6h r7h ];
-attach variables [ reg16hi reg16lo reg3lo reg3hi ] [ r0 r1 r2 r3 r4 r5 r6 r7 ];
+attach variables [ reg8hi reg8lo ] [ r0h r1h r2h r3h r4h r5h r6h r7h r0l r1l r2l r3l r4l r5l r6l r7l ];
+
+@ifndef ADVANCED
+attach variables [ reg16hi reg16lo reg3lo reg3hi ] [ r0 r1 r2 r3 r4 r5 r6 r7];
+@endif
 
 # H8/300 instructions
 
 addr8: @imm8 is imm8 { export *:2 imm8; }
 addr16: @imm16 is imm16 { export *:2 imm16; }
-absaddr8.b: @imm8 is imm8 { export *:1 imm8; }
-absaddr16.b: @imm16 is imm16 { export *:1 imm16; }
-absaddr16.w: @imm16 is imm16 { export *:2 imm16; }
-pcoff8: reloc is simm8 [ reloc=inst_next+simm8; ] { export *:3 reloc; }
+absaddr8.b: @tmp is imm8 [ tmp = 0xFFFF00 + imm8; ] { export *:1 tmp; }
+absaddr16.b: @addr is b15=1 & imm16 [ addr = 0xFF0000 + imm16; ] { export *:1 addr; }
+absaddr16.b: @imm16 is b15=0 & imm16 { export *:1 imm16; }
+absaddr16.w: @addr is b15=1 & imm16 [ addr = 0xFF0000 + imm16;] { export *:2 addr; }
+absaddr16.w: @imm16 is b15=0 & imm16 { export *:2 imm16; }
+pcoff8: reloc is simm8 [ reloc=inst_next+simm8; ] { export *:4 reloc; }
 
 src_r8: reg8hi is reg8hi { export reg8hi; }
 dst_r8: reg8lo is reg8lo { export reg8lo; }
-src_r16: reg16hi is b7=0 & reg16hi { export reg16hi; }
-dst_r16: reg16lo is b3=0 & reg16lo { export reg16lo; }
 
 @ifndef ADVANCED
+src_r16: reg16hi is b7=0 & reg16hi { export reg16hi; }
+dst_r16: reg16lo is b3=0 & reg16lo { export reg16lo; }
 src_r3b1: reg16hi is b7=1 & reg16hi { export reg16hi; }
 src_r3b: reg3hi is b7=0 & reg3hi { export reg3hi; }
 dst_r3b: reg3lo is b3=0 & reg3lo { export reg3lo; }
@@ -62,22 +67,22 @@ regind_src.b: @reg3hi is b7=0 & reg3hi { export *:1 reg3hi; }
 
 @endif
 
-cc: "ra" is ccfld=0 { export 1:1; }
-cc: "rn" is ccfld=1 { export 0:1; }
-cc: "hi" is ccfld=2 { tmp:1 = !($(C_FLAG) || $(Z_FLAG)); export tmp; }
-cc: "ls" is ccfld=3 { tmp:1 = $(C_FLAG) || $(Z_FLAG); export tmp; }
-cc: "cc" is ccfld=4 { tmp:1 = !$(C_FLAG); export tmp; }
-cc: "cs" is ccfld=5 { tmp:1 = $(C_FLAG); export tmp; }
-cc: "ne" is ccfld=6 { tmp:1 = !$(Z_FLAG); export tmp; }
-cc: "eq" is ccfld=7 { tmp:1 = $(Z_FLAG); export tmp; }
-cc: "vc" is ccfld=8 { tmp:1 = !$(V_FLAG); export tmp; }
-cc: "vs" is ccfld=9 { tmp:1 = $(V_FLAG); export tmp; }
-cc: "pl" is ccfld=10 { tmp:1 = !$(N_FLAG); export tmp; }
-cc: "mi" is ccfld=11 { tmp:1 = $(N_FLAG); export tmp; }
-cc: "ge" is ccfld=12 { tmp:1 = ($(V_FLAG)==$(N_FLAG)); export tmp; }
-cc: "lt" is ccfld=13 { tmp:1 = ($(V_FLAG)!=$(N_FLAG)); export tmp; }
-cc: "gt" is ccfld=14 { tmp:1 = !$(Z_FLAG) && ($(V_FLAG)==$(N_FLAG)); export tmp; }
-cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
+cc: "ra" is lnyb=0 { export 1:1; }
+cc: "rn" is lnyb=1 { export 0:1; }
+cc: "hi" is lnyb=2 { tmp:1 = !($(C_FLAG) || $(Z_FLAG)); export tmp; }
+cc: "ls" is lnyb=3 { tmp:1 = $(C_FLAG) || $(Z_FLAG); export tmp; }
+cc: "cc" is lnyb=4 { tmp:1 = !$(C_FLAG); export tmp; }
+cc: "cs" is lnyb=5 { tmp:1 = $(C_FLAG); export tmp; }
+cc: "ne" is lnyb=6 { tmp:1 = !$(Z_FLAG); export tmp; }
+cc: "eq" is lnyb=7 { tmp:1 = $(Z_FLAG); export tmp; }
+cc: "vc" is lnyb=8 { tmp:1 = !$(V_FLAG); export tmp; }
+cc: "vs" is lnyb=9 { tmp:1 = $(V_FLAG); export tmp; }
+cc: "pl" is lnyb=10 { tmp:1 = !$(N_FLAG); export tmp; }
+cc: "mi" is lnyb=11 { tmp:1 = $(N_FLAG); export tmp; }
+cc: "ge" is lnyb=12 { tmp:1 = ($(V_FLAG)==$(N_FLAG)); export tmp; }
+cc: "lt" is lnyb=13 { tmp:1 = ($(V_FLAG)!=$(N_FLAG)); export tmp; }
+cc: "gt" is lnyb=14 { tmp:1 = !$(Z_FLAG) && ($(V_FLAG)==$(N_FLAG)); export tmp; }
+cc: "le" is lnyb=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
 
 
 :add.b #imm8,dst_r8 is op4=0x8 & dst_r8; imm8 {
@@ -298,9 +303,9 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 	$(C_FLAG) = $(C_FLAG) ^ (absaddr8.b >> bit) & 1;
 }
 
-:bsr pcoff8 is op8=0x55; pcoff8 {
+:bsr simm8 is op8=0x55; simm8 {
 	pushpc();
-	call pcoff8;
+	call [simm8:1];
 }
 
 :cmp.b #imm8,dst_r8 is op4=0xA & dst_r8; imm8 {
@@ -341,7 +346,10 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 :eepmov.b is op16=0x7B5C; op16=0x598F {
 	if (r4l != 0) goto <end>;
 	<nextbyte>
-	*:1 r6 = *:1 r5;
+	local src:4 = zext(r5);
+	local dst:4 = zext(r6);
+	*:1 dst = *:1 src;
+#	*:1 r6 = *:1 r5;
 	r5 = r5 + 1;
 	r6 = r6 + 1;
 	r4l = r4l - 1;
@@ -444,7 +452,8 @@ cc: "le" is ccfld=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; 
 }
 :rte is op16=0x5670 {
 	poppcccr();
-	return [pc];
+	local retaddr:4 = zext(pc);
+	return [retaddr];
 }
 :rts is op16=0x5470 { poppc(); return [pc]; }
 
