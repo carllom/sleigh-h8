@@ -70,3 +70,21 @@ carry (C) or scarry/overflow(V) uses built in functions - is OK?
 ~! match 0 bits, sometimes they do matter (band, biand) - go through all instructions and fill in 0-bits~
 
 Use more `@define`s? Use300H, UseAdvanced
+
+## C interface
+
+### Renesas C compiler
+
+[https://www.renesas.com/us/en/document/mat/h8s-h8300-series-cc-compiler-package-ver700-users-manual?language=en&r=1169476](Renesas c compiler manual page 279)
+
+Default 2 registers reserved for parameters?
+
+* ER0-ER1 caller-save (H8/300: R0-R1) (also E/R2 if 3 parameter registers defined)
+  These registers can be overwritten by function at will
+* ER2-ER6 calee-save (H8/300: R2-R6) (or E/R3.. if 3 parameter registers defined)
+  These registers are restored before returning
+
+@253D0 Register restore helper function (sort of a stdcall helper)
+@253F2 Register save helper function
+
+@3ff misread A8 (should be 28?)
