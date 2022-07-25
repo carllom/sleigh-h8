@@ -38,7 +38,7 @@ macro subflags11(operand1,operand2) {
 attach variables [ reg8hi reg8lo ] [ r0h r1h r2h r3h r4h r5h r6h r7h r0l r1l r2l r3l r4l r5l r6l r7l ];
 
 @ifndef ADVANCED
-attach variables [ reg16hi reg16lo reg3lo reg3hi ] [ r0 r1 r2 r3 r4 r5 r6 r7];
+attach variables [ reg16hi reg16lo reg3lo reg3hi ] [ r0 r1 r2 r3 r4 r5 r6 r7 ];
 @endif
 
 # H8/300 instructions
@@ -51,6 +51,9 @@ absaddr16.b: "@"imm16 is b15=0 & imm16 { export *:1 imm16; }
 absaddr16.w: "@"addr is b15=1 & imm16 [ addr = 0xFF0000 + imm16;] { export *:2 addr; }
 absaddr16.w: "@"imm16 is b15=0 & imm16 { export *:2 imm16; }
 pcoff8: reloc is simm8 [ reloc=inst_next+simm8; ] { export *:4 reloc; }
+
+op_imm8: "#"^imm8 is imm8 { export *[const]:1 imm8; }
+op_imm16: "#"^imm16 is imm16 { export *[const]:2 imm16; }
 
 src_r8: reg8hi is reg8hi { export reg8hi; }
 dst_r8: reg8lo is reg8lo { export reg8lo; }
@@ -85,9 +88,9 @@ cc: "gt" is lnyb=14 { tmp:1 = !$(Z_FLAG) && ($(V_FLAG)==$(N_FLAG)); export tmp; 
 cc: "le" is lnyb=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
 
 
-:add.b #imm8,dst_r8 is op4=0x8 & dst_r8; imm8 {
-	addflags(dst_r8, imm8);
-	dst_r8 = dst_r8 + imm8;
+:add.b op_imm8,dst_r8 is op4=0x8 & dst_r8; op_imm8 {
+	addflags(dst_r8, op_imm8);
+	dst_r8 = dst_r8 + op_imm8;
 	resflags(dst_r8);
 }
 :add.b src_r8,dst_r8 is op8=0x08; src_r8 & dst_r8 {
@@ -102,8 +105,8 @@ cc: "le" is lnyb=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
 }
 :adds "#"1,dst_r3b is op8=0x0B; op4=0 & dst_r3b { dst_r3b = dst_r3b + 1; }
 :adds "#"2,dst_r3b is op8=0x0B; op4=8 & dst_r3b { dst_r3b = dst_r3b + 2; }
-:addx "#"imm8,dst_r8 is op4=0x9 & dst_r8; imm8 {
-	local srcop = imm8 + $(C_FLAG);
+:addx op_imm8,dst_r8 is op4=0x9 & dst_r8; op_imm8 {
+	local srcop = op_imm8 + $(C_FLAG);
 	addflags(dst_r8, srcop);
 	dst_r8 = dst_r8 + srcop;
 	resflags(dst_r8);
@@ -114,15 +117,15 @@ cc: "le" is lnyb=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
 	dst_r8 = dst_r8 + srcop;
 	resflags(dst_r8);
 }
-:and.b "#"imm8,dst_r8 is op4=0xE & dst_r8; imm8 {
-	dst_r8 = dst_r8 & imm8;
+:and.b op_imm8,dst_r8 is op4=0xE & dst_r8; op_imm8 {
+	dst_r8 = dst_r8 & op_imm8;
 	movflags(dst_r8);
 }
 :and.b src_r8,dst_r8 is op8=0x16; src_r8 & dst_r8 {
 	dst_r8 = dst_r8 & src_r8;
 	movflags(dst_r8);
 }
-:andc "#"imm8,"ccr" is op8=0x06; imm8 { ccr = ccr & imm8; }
+:andc op_imm8,"ccr" is op8=0x06; op_imm8 { ccr = ccr & op_imm8; }
 
 :b^cc pcoff8 is op4=4 & cc; pcoff8 {
 	if (cc) goto pcoff8;
@@ -308,9 +311,9 @@ cc: "le" is lnyb=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
 	call pcoff8;
 }
 
-:cmp.b "#"imm8,dst_r8 is op4=0xA & dst_r8; imm8 {
-	subflags3(dst_r8, imm8);
-	resflags(dst_r8-imm8);
+:cmp.b op_imm8,dst_r8 is op4=0xA & dst_r8; op_imm8 {
+	subflags3(dst_r8, op_imm8);
+	resflags(dst_r8-op_imm8);
 }
 :cmp.b src_r8,dst_r8 is op8=0x1C; src_r8 & dst_r8 {
 	subflags3(dst_r8, src_r8);
@@ -388,17 +391,17 @@ cc: "le" is lnyb=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
 	call [addr8];
 }
 
-:ldc.b "#"imm8,"ccr" is op8=0x07; imm8 { ccr = imm8; }
+:ldc.b op_imm8,"ccr" is op8=0x07; op_imm8 { ccr = op_imm8; }
 :ldc.b dst_r8,"ccr" is op8=0x03; hnyb=0 & dst_r8 { ccr = dst_r8; }
 :mov.b src_r8,dst_r8 is op8=0x0C; src_r8 & dst_r8 { dst_r8 = src_r8; movflags(dst_r8); }
 :mov.w src_r16,dst_r16 is op8=0x0D; src_r16 & dst_r16 { dst_r16 = src_r16; movflags(dst_r16); }
-:mov.b "#"imm8,dst_r8 is op4=0xF & dst_r8; imm8 { dst_r8 = imm8; movflags(dst_r8); }
+:mov.b op_imm8,dst_r8 is op4=0xF & dst_r8; op_imm8 { dst_r8 = op_imm8; movflags(dst_r8); }
 :mov.b @src_r3b,dst_r8 is op8=0x68; src_r3b & dst_r8 { dst_r8 = *:1 src_r3b; movflags(dst_r8); }
 :mov.b @(imm16,src_r3b),dst_r8 is op8=0x6E; src_r3b & dst_r8; imm16 { local tmp = src_r3b + imm16; dst_r8 = *:1 tmp; movflags(dst_r8); }
 :mov.b @src_r3b+,dst_r8 is op8=0x6C; src_r3b & dst_r8 { dst_r8 = *:1 src_r3b; src_r3b = src_r3b + 1; movflags(dst_r8); }
 :mov.b absaddr8.b,dst_r8 is op4=0x2 & dst_r8; absaddr8.b { dst_r8 = absaddr8.b; movflags(dst_r8); }
 :mov.b absaddr16.b,dst_r8 is op8=0x6A; hnyb=0 & dst_r8; absaddr16.b { dst_r8 = absaddr16.b; movflags(dst_r8); }
-:mov.w "#"imm16,dst_r16 is op8=0x79; hnyb=0 & dst_r16; imm16 { dst_r16 = imm16; movflags(dst_r16); }
+:mov.w op_imm16,dst_r16 is op8=0x79; hnyb=0 & dst_r16; op_imm16 { dst_r16 = op_imm16; movflags(dst_r16); }
 :mov.w @src_r3b,dst_r16 is op8=0x69; src_r3b & dst_r16 { dst_r16 = *:2 src_r3b; movflags(dst_r16); }
 :mov.w @(imm16,src_r3b),dst_r16 is op8=0x6F; src_r3b & dst_r16; imm16 { local tmp = src_r3b + imm16; dst_r16 = *:2 tmp; movflags(dst_r16); }
 :mov.w @src_r3b+,dst_r16 is op8=0x6D; src_r3b & dst_r16 { dst_r16 = *:2 src_r3b; src_r3b = src_r3b + 2; movflags(dst_r16); }
@@ -419,15 +422,15 @@ cc: "le" is lnyb=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
 :neg.b dst_r8 is op8=0x17; op4=8 & dst_r8 { subflags3(0,dst_r8); dst_r8 = -dst_r8; resflags(dst_r8); }
 :nop is op16=0 {}
 :not.b dst_r8 is op8=0x17; op4=0 & dst_r8 { dst_r8 = ~dst_r8; movflags(dst_r8); }
-:or.b #imm8,dst_r8 is op4=0xC & dst_r8; imm8 {
-	dst_r8 = dst_r8 | imm8;
+:or.b op_imm8,dst_r8 is op4=0xC & dst_r8; op_imm8 {
+	dst_r8 = dst_r8 | op_imm8;
 	movflags(dst_r8);
 }
 :or.b src_r8,dst_r8 is op8=0x14; src_r8 & dst_r8 {
 	dst_r8 = dst_r8 | src_r8;
 	movflags(dst_r8);
 }
-:orc "#"imm8,"ccr" is op8=0x04; imm8 { ccr = ccr | imm8; }
+:orc op_imm8,"ccr" is op8=0x04; op_imm8 { ccr = ccr | op_imm8; }
 :pop.w dst_r16 is op8=0x6D; op4=7 & dst_r16 { dst_r16 = *$(SP); $(SP) = $(SP)+2; movflags(dst_r16); }
 :push.w dst_r16 is op8=0x6D; op4=0xF & dst_r16 { $(SP) = $(SP)-2; *$(SP) = dst_r16; movflags(dst_r16); }
 :rotl.b dst_r8 is op8=0x12; op4=8 & dst_r8 {
@@ -488,8 +491,8 @@ cc: "le" is lnyb=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
 :sub.w src_r16,dst_r16 is op8=0x19; src_r16 & dst_r16 {subflags11(dst_r16,src_r16); dst_r16 = dst_r16 - src_r16; resflags(dst_r16); }
 :subs "#1",dst_r3b is op8=0x1B; op4=0 & dst_r3b { dst_r3b = dst_r3b - 1; }
 :subs "#2",dst_r3b is op8=0x1B; op4=8 & dst_r3b { dst_r3b = dst_r3b - 1; }
-:subx "#"imm8,dst_r8 is op4=0xB & dst_r8; imm8 { local s = imm8 + $(C_FLAG); subflags3(dst_r8,s); dst_r8 = dst_r8 - s; resflags(dst_r8); }
+:subx op_imm8,dst_r8 is op4=0xB & dst_r8; op_imm8 { local s = op_imm8 + $(C_FLAG); subflags3(dst_r8,s); dst_r8 = dst_r8 - s; resflags(dst_r8); }
 :subx src_r8,dst_r8 is op8=0x1E; src_r8 & dst_r8 { local s = src_r8 + $(C_FLAG); subflags3(dst_r8,s); dst_r8 = dst_r8 - s; resflags(dst_r8); }
-:xor.b "#"imm8,dst_r8 is op4=0xD & dst_r8; imm8 { dst_r8 = dst_r8 ^ imm8; movflags(dst_r8); }
+:xor.b op_imm8,dst_r8 is op4=0xD & dst_r8; op_imm8 { dst_r8 = dst_r8 ^ op_imm8; movflags(dst_r8); }
 :xor.b src_r8,dst_r8 is op8=0x15; src_r8 & dst_r8 { dst_r8 = dst_r8 ^ src_r8; movflags(dst_r8); }
-:xorc "#"imm8,"ccr" is op8=0x05; imm8 { ccr = ccr ^ imm8; }
+:xorc op_imm8,"ccr" is op8=0x05; op_imm8 { ccr = ccr ^ op_imm8; }
