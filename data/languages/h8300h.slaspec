@@ -318,95 +318,95 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 :pop.l dst_r32 is op24=0x01006D; op4=7 & dst_r32 { dst_r32 = *$(SP); $(SP) = $(SP)+4; movflags(dst_r32); }
 :push.l dst_r32 is op24=0x01006D; op4=0xF & dst_r32 { $(SP) = $(SP)-4; *$(SP) = dst_r32; movflags(dst_r32); }
 :rotl.w dst_r16 is op8=0x12; op4=9 & dst_r16 {
-#	local c = dst_r16 >> 15;
-#	$(C_FLAG) = c;
-#	dst_r16 = (dst_r16 << 1) | c;
-#	movflags(dst_r16);
+	local c = dst_r16 >> 15;
+	dst_r16 = (dst_r16 << 1) | c;
+	movflags(dst_r16);
+	$(C_FLAG) = (c != 0);
 }
 :rotl.l dst_r32 is op8=0x12; op4=0xB & dst_r32 {
-#	local c = dst_r32 >> 31;
-#	$(C_FLAG) = c;
-#	dst_r32 = (dst_r32 << 1) | c;
-#	movflags(dst_r32);
+	local c = dst_r32 >> 31;
+	dst_r32 = (dst_r32 << 1) | c;
+	$(C_FLAG) = (c != 0);
+	movflags(dst_r32);
 }
 :rotr.w dst_r16 is op8=0x13; op4=9 & dst_r16 {
-#	local c = dst_r16 & 1;
-#	$(C_FLAG) = c;
-#	dst_r16 = (c << 15) | (dst_r16 >> 1);
-#	movflags(dst_r16);
+	local c = dst_r16 & 1;
+	dst_r16 = (c << 15) | (dst_r16 >> 1);
+	$(C_FLAG) = (c != 0);
+	movflags(dst_r16);
 }
 :rotr.l dst_r32 is op8=0x13; op4=0xB & dst_r32 {
-#	local c = dst_r32 & 1;
-#	$(C_FLAG) = c;
-#	dst_r32 = (c << 31) | (dst_r32 >> 1);
-#	movflags(dst_r32);
+	local c = dst_r32 & 1;
+	dst_r32 = (c << 31) | (dst_r32 >> 1);
+	$(C_FLAG) = (c != 0);
+	movflags(dst_r32);
 }
 :rotxl.w dst_r16 is op8=0x12; op4=1 & dst_r16 {
-#	local c = $(C_FLAG);
-#	$(C_FLAG) = dst_r16 >> 15;
-#	dst_r16 = (dst_r16 << 1) | c;
-#	movflags(dst_r16);
+	local c:2 = zext($(C_FLAG));
+	$(C_FLAG) = (dst_r16 >> 15) != 0;
+	dst_r16 = (dst_r16 << 1) | c;
+	movflags(dst_r16);
 }
 :rotxl.l dst_r32 is op8=0x12; op4=3 & dst_r32 {
-#	local c = $(C_FLAG);
-#	$(C_FLAG) = dst_r32 >> 31;
-#	dst_r32 = (dst_r32 << 1) | c;
-#	movflags(dst_r32);
+	local c:4 = zext($(C_FLAG));
+	$(C_FLAG) = (dst_r32 >> 31) != 0;
+	dst_r32 = (dst_r32 << 1) | c;
+	movflags(dst_r32);
 }
 :rotxr.w dst_r16 is op8=0x13; op4=1 & dst_r16 {
-#	local c = $(C_FLAG);
-#	$(C_FLAG) = dst_r16 & 1;
-#	dst_r16 = (c << 15) | (dst_r16 >> 1);
-#	movflags(dst_r16);
+	local c:2 = zext($(C_FLAG));
+	$(C_FLAG) = (dst_r16 & 1) != 0;
+	dst_r16 = (c << 15) | (dst_r16 >> 1);
+	movflags(dst_r16);
 }
-:rotxr.w dst_r32 is op8=0x13; op4=3 & dst_r32 {
-#	local c = $(C_FLAG);
-#	$(C_FLAG) = dst_r32 & 1;
-#	dst_r32 = (c << 31) | (dst_r32 >> 1);
-#	movflags(dst_r32);
+:rotxr.l dst_r32 is op8=0x13; op4=3 & dst_r32 {
+	local c:4 = zext($(C_FLAG));
+	$(C_FLAG) = (dst_r32 & 1) != 0;
+	dst_r32 = (c << 31) | (dst_r32 >> 1);
+	movflags(dst_r32);
 }
 
 :shal.w dst_r16 is op8=0x10; op4=9 & dst_r16 {
-#	$(V_FLAG) = dst_r16 >> 15;
-#	$(C_FLAG) = dst_r16 >> 15;
-#	dst_r16 = dst_r16 << 1;
-#	resflags(dst_r16);
+	$(V_FLAG) = (dst_r16 & 0x8000) != 0;
+	$(C_FLAG) = $(V_FLAG);
+	dst_r16 = dst_r16 << 1;
+	resflags(dst_r16);
 }
 :shal.l dst_r32 is op8=0x10; op4=0xB & dst_r32 {
-#	$(V_FLAG) = dst_r32 >> 31;
-#	$(C_FLAG) = dst_r32 >> 31;
-#	dst_r32 = dst_r32 << 1;
-#	resflags(dst_r32);
+	$(V_FLAG) = (dst_r32 & 0x80000000) != 0;
+	$(C_FLAG) = $(V_FLAG);
+	dst_r32 = dst_r32 << 1;
+	resflags(dst_r32);
 }
 :shar.w dst_r16 is op8=0x11; op4=9 & dst_r16 {
-#	$(C_FLAG) = dst_r16 & 1;
-#	dst_r16 = dst_r16 s>> 1;
-#	movflags(dst_r16);
+	$(C_FLAG) = (dst_r16 & 1) != 0;
+	dst_r16 = dst_r16 s>> 1;
+	movflags(dst_r16);
 }
 :shar.l dst_r32 is op8=0x11; op4=0xB & dst_r32 {
-#	$(C_FLAG) = dst_r32 & 1;
-#	dst_r32 = dst_r32 s>> 1;
-#	movflags(dst_r32);
+	$(C_FLAG) = (dst_r32 & 1) != 0;
+	dst_r32 = dst_r32 s>> 1;
+	movflags(dst_r32);
 }
 :shll.w dst_r16 is op8=0x10; op4=1 & dst_r16 {
-#	$(C_FLAG) = dst_r16 >> 15;
-#	dst_r16 = dst_r16 << 1;
-#	movflags(dst_r16);
+	$(C_FLAG) = (dst_r16 & 0x8000) != 0;
+	dst_r16 = dst_r16 << 1;
+	movflags(dst_r16);
 }
 :shll.l dst_r32 is op8=0x10; op4=3 & dst_r32 {
-#	$(C_FLAG) = dst_r32 >> 31;
-#	dst_r32 = dst_r32 << 1;
-#	movflags(dst_r32);
+	$(C_FLAG) = (dst_r32 & 0x80000000) != 0;
+	dst_r32 = dst_r32 << 1;
+	movflags(dst_r32);
 }
 :shlr.w dst_r16 is op8=0x11; op4=1 & dst_r16 {
-#	$(C_FLAG) = dst_r16 & 1;
-#	dst_r16 = dst_r16 >> 1;
-#	movflags(dst_r16);
+	$(C_FLAG) = (dst_r16 & 1) != 0;
+	dst_r16 = dst_r16 >> 1;
+	movflags(dst_r16);
 }
 :shlr.l dst_r32 is op8=0x11; op4=3 & dst_r32 {
-#	$(C_FLAG) = dst_r32 & 1;
-#	dst_r32 = dst_r32 >> 1;
-#	movflags(dst_r32);
+	$(C_FLAG) = (dst_r32 & 1) != 0;
+	dst_r32 = dst_r32 >> 1;
+	movflags(dst_r32);
 }
 :stc.w "ccr",@src_r321 is op24=0x014069; src_r321 & lnyb=0 { *:1 src_r321 = ccr; }
 :stc.w "ccr",@(imm16,src_r321) is op24=0x01406F; src_r321 & lnyb=0; imm16 { local tmp = src_r321 + imm16; *:1 tmp = ccr; }
