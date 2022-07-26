@@ -2,4 +2,225 @@
 
 <processor_spec>
   <programcounter register="pc"/>
+
+  <volatile outputop="write" inputop="read">
+    <range space="ram" first="0xFFFF1C" last="0xFFFFFF"/> <!-- Peripheral registers -->
+  </volatile>
+
+
+  <default_symbols>
+  	<!-- Reset vector -->
+  	<symbol name="RESET" address="ram:0x0" entry="true" type="code_ptr"/>
+	<!-- External and software interrupts -->
+  	<symbol name="NMI"  address="ram:0x1C" entry="true" type="code_ptr"/>
+  	<symbol name="TRAP0" address="ram:0x20" type="code_ptr"/>
+  	<symbol name="TRAP1" address="ram:0x24" type="code_ptr"/>
+  	<symbol name="TRAP2" address="ram:0x28" type="code_ptr"/>
+  	<symbol name="TRAP3" address="ram:0x2C" type="code_ptr"/>
+  	<symbol name="IRQ0" address="ram:0x30" type="code_ptr"/>
+  	<symbol name="IRQ1" address="ram:0x34" type="code_ptr"/>
+  	<symbol name="IRQ2" address="ram:0x38" type="code_ptr"/>
+  	<symbol name="IRQ3" address="ram:0x3C" type="code_ptr"/>
+  	<symbol name="IRQ4" address="ram:0x40" type="code_ptr"/>
+  	<symbol name="IRQ5" address="ram:0x44" type="code_ptr"/>
+  	<!-- Internal interrupts -->
+  	<symbol name="WOVI" address="ram:0x50" type="code_ptr"/>
+    <symbol name="CMI"  address="ram:0x54" type="code_ptr"/>
+    <symbol name="IMIA0" address="ram:0x60" type="code_ptr"/>
+    <symbol name="IMIB0" address="ram:0x64" type="code_ptr"/>
+  	<symbol name="OVI0" address="ram:0x68" type="code_ptr"/>
+  	<symbol name="IMIA1" address="ram:0x70" type="code_ptr"/>
+    <symbol name="IMIB1" address="ram:0x74" type="code_ptr"/>
+  	<symbol name="OVI1" address="ram:0x78" type="code_ptr"/>
+  	<symbol name="IMIA2" address="ram:0x80" type="code_ptr"/>
+    <symbol name="IMIB2" address="ram:0x84" type="code_ptr"/>
+  	<symbol name="OVI2" address="ram:0x88" type="code_ptr"/>
+  	<symbol name="IMIA3" address="ram:0x90" type="code_ptr"/>
+    <symbol name="IMIB3" address="ram:0x94" type="code_ptr"/>
+  	<symbol name="OVI3" address="ram:0x98" type="code_ptr"/>
+  	<symbol name="IMIA4" address="ram:0xA0" type="code_ptr"/>
+    <symbol name="IMIB4" address="ram:0xA4" type="code_ptr"/>
+  	<symbol name="OVI4" address="ram:0xA8" type="code_ptr"/>
+  	<symbol name="DEND0A" address="ram:0xB0" type="code_ptr"/>
+    <symbol name="DEND0B" address="ram:0xB4" type="code_ptr"/>
+  	<symbol name="DEND1A" address="ram:0xB8" type="code_ptr"/>
+    <symbol name="DEND1B" address="ram:0xBC" type="code_ptr"/>
+  	<symbol name="ERI0" address="ram:0xD0" type="code_ptr"/>
+    <symbol name="RXI0" address="ram:0xD4" type="code_ptr"/>
+  	<symbol name="TXI0" address="ram:0xD8" type="code_ptr"/>
+    <symbol name="TEI0" address="ram:0xDC" type="code_ptr"/>
+  	<symbol name="ERI1" address="ram:0xE0" type="code_ptr"/>
+    <symbol name="RXI1" address="ram:0xE4" type="code_ptr"/>
+  	<symbol name="TXI1" address="ram:0xE8" type="code_ptr"/>
+    <symbol name="TEI1" address="ram:0xEC" type="code_ptr"/>
+  	<symbol name="ADI" address="ram:0xF0" type="code_ptr"/>
+  	
+  	<!-- Peripheral registers -->
+    <symbol name="MAR0AR" address="ram:0xFFFF20"/>
+    <symbol name="MAR0AE" address="ram:0xFFFF21"/>
+    <symbol name="MAR0AH" address="ram:0xFFFF22"/>
+    <symbol name="MAR0AL" address="ram:0xFFFF23"/>
+    <symbol name="ETCR0AH" address="ram:0xFFFF24"/>
+    <symbol name="ETCR0AL" address="ram:0xFFFF25"/>
+    <symbol name="IOAR0A" address="ram:0xFFFF26"/>
+    <symbol name="DTCR0A" address="ram:0xFFFF27"/>
+    <symbol name="MAR0BR" address="ram:0xFFFF28"/>
+    <symbol name="MAR0BE" address="ram:0xFFFF29"/>
+    <symbol name="MAR0BH" address="ram:0xFFFF2A"/>
+    <symbol name="MAR0BL" address="ram:0xFFFF2B"/>
+    <symbol name="ETCR0BH" address="ram:0xFFFF2C"/>
+    <symbol name="ETCR0BL" address="ram:0xFFFF2D"/>
+    <symbol name="IOAR0B" address="ram:0xFFFF2E"/>
+    <symbol name="DTCR0B" address="ram:0xFFFF2F"/>
+    <symbol name="MAR1AR" address="ram:0xFFFF30"/>
+    <symbol name="MAR1AE" address="ram:0xFFFF31"/>
+    <symbol name="MAR1AH" address="ram:0xFFFF32"/>
+    <symbol name="MAR1AL" address="ram:0xFFFF33"/>
+    <symbol name="ETCR1AH" address="ram:0xFFFF34"/>
+    <symbol name="ETCR1AL" address="ram:0xFFFF35"/>
+    <symbol name="IOAR1A" address="ram:0xFFFF36"/>
+    <symbol name="DTCR1A" address="ram:0xFFFF37"/>
+    <symbol name="MAR1BR" address="ram:0xFFFF38"/>
+    <symbol name="MAR1BE" address="ram:0xFFFF39"/>
+    <symbol name="MAR1BH" address="ram:0xFFFF3A"/>
+    <symbol name="MAR1BL" address="ram:0xFFFF3B"/>
+    <symbol name="ETCR1BH" address="ram:0xFFFF3C"/>
+    <symbol name="ETCR1BL" address="ram:0xFFFF3D"/>
+    <symbol name="IOAR1B" address="ram:0xFFFF3E"/>
+    <symbol name="DTCR1B" address="ram:0xFFFF3F"/>
+    <symbol name="TSTR"   address="ram:0xFFFF60"/>
+    <symbol name="TSNC"   address="ram:0xFFFF61"/>
+    <symbol name="TMDR"   address="ram:0xFFFF62"/>
+    <symbol name="TFCR"   address="ram:0xFFFF63"/>
+    <symbol name="TCR0"   address="ram:0xFFFF64"/>
+    <symbol name="TIOR0"  address="ram:0xFFFF65"/>
+    <symbol name="TIER0"  address="ram:0xFFFF66"/>
+    <symbol name="TSR0"   address="ram:0xFFFF67"/>
+    <symbol name="TCNT0H" address="ram:0xFFFF68"/>
+    <symbol name="TCNT0L" address="ram:0xFFFF69"/>
+    <symbol name="GRA0H"  address="ram:0xFFFF6A"/>
+    <symbol name="GRA0L"  address="ram:0xFFFF6B"/>
+    <symbol name="GRB0H"  address="ram:0xFFFF6C"/>
+    <symbol name="GRB0L"  address="ram:0xFFFF6D"/>
+    <symbol name="TCR1"   address="ram:0xFFFF6E"/>
+    <symbol name="TIOR1"  address="ram:0xFFFF6F"/>
+    <symbol name="TIER1"  address="ram:0xFFFF70"/>
+    <symbol name="TSR1"   address="ram:0xFFFF71"/>
+    <symbol name="TCNT1H" address="ram:0xFFFF72"/>
+    <symbol name="TCNT1L" address="ram:0xFFFF73"/>
+    <symbol name="GRA1H"  address="ram:0xFFFF74"/>
+    <symbol name="GRA1L"  address="ram:0xFFFF75"/>
+    <symbol name="GRB1H"  address="ram:0xFFFF76"/>
+    <symbol name="GRB1L"  address="ram:0xFFFF77"/>
+    <symbol name="TCR2"   address="ram:0xFFFF78"/>
+    <symbol name="TIOR2"  address="ram:0xFFFF79"/>
+    <symbol name="TIER2"  address="ram:0xFFFF7A"/>
+    <symbol name="TSR2"   address="ram:0xFFFF7B"/>
+    <symbol name="TCNT2H" address="ram:0xFFFF7C"/>
+    <symbol name="TCNT2L" address="ram:0xFFFF7D"/>
+    <symbol name="GRA2H"  address="ram:0xFFFF7E"/>
+    <symbol name="GRA2L"  address="ram:0xFFFF7F"/>
+    <symbol name="GRB2H"  address="ram:0xFFFF80"/>
+    <symbol name="GRB2L"  address="ram:0xFFFF81"/>
+    <symbol name="TCR3"   address="ram:0xFFFF82"/>
+    <symbol name="TIOR3"  address="ram:0xFFFF83"/>
+    <symbol name="TIER3"  address="ram:0xFFFF84"/>
+    <symbol name="TSR3"   address="ram:0xFFFF85"/>
+    <symbol name="TCNT3H" address="ram:0xFFFF86"/>
+    <symbol name="TCNT3L" address="ram:0xFFFF87"/>
+    <symbol name="GRA3H"  address="ram:0xFFFF88"/>
+    <symbol name="GRA3L"  address="ram:0xFFFF89"/>
+    <symbol name="GRB3H"  address="ram:0xFFFF8A"/>
+    <symbol name="GRB3L"  address="ram:0xFFFF8B"/>
+    <symbol name="BRA3H"  address="ram:0xFFFF8C"/>
+    <symbol name="BRA3L"  address="ram:0xFFFF8D"/>
+    <symbol name="BRB3H"  address="ram:0xFFFF8E"/>
+    <symbol name="BRB3L"  address="ram:0xFFFF8F"/>
+    <symbol name="TOER"   address="ram:0xFFFF90"/>
+    <symbol name="TOCR"   address="ram:0xFFFF91"/>
+    <symbol name="TCR4"   address="ram:0xFFFF92"/>
+    <symbol name="TIOR4"  address="ram:0xFFFF93"/>
+    <symbol name="TIER4"  address="ram:0xFFFF94"/>
+    <symbol name="TSR4"   address="ram:0xFFFF95"/>
+    <symbol name="TCNT4H" address="ram:0xFFFF96"/>
+    <symbol name="TCNT4L" address="ram:0xFFFF97"/>
+    <symbol name="GRA4H"  address="ram:0xFFFF98"/>
+    <symbol name="GRA4L"  address="ram:0xFFFF99"/>
+    <symbol name="GRB4H"  address="ram:0xFFFF9A"/>
+    <symbol name="GRB4L"  address="ram:0xFFFF9B"/>
+    <symbol name="BRA4H"  address="ram:0xFFFF9C"/>
+    <symbol name="BRA4L"  address="ram:0xFFFF9D"/>
+    <symbol name="BRB4H"  address="ram:0xFFFF9E"/>
+    <symbol name="BRB4L"  address="ram:0xFFFF9F"/>
+    <symbol name="TPMR"   address="ram:0xFFFFA0"/>
+    <symbol name="TPCR"   address="ram:0xFFFFA1"/>
+    <symbol name="NDERB"  address="ram:0xFFFFA2"/>
+    <symbol name="NDERA"  address="ram:0xFFFFA3"/>
+    <symbol name="NDRB0"  address="ram:0xFFFFA4"/>
+    <symbol name="NDRA0"  address="ram:0xFFFFA5"/>
+    <symbol name="NDRB1"  address="ram:0xFFFFA6"/>
+    <symbol name="NDRA1"  address="ram:0xFFFFA7"/>
+    <symbol name="TCSR"   address="ram:0xFFFFA8"/>
+    <symbol name="TCNT"   address="ram:0xFFFFA9"/>
+    <symbol name="RSTCSR" address="ram:0xFFFFAB"/>
+    <symbol name="RFSHCR" address="ram:0xFFFFAC"/>
+    <symbol name="RTMCSR" address="ram:0xFFFFAD"/>
+    <symbol name="RTCNT"  address="ram:0xFFFFAE"/>
+    <symbol name="RTCOR"  address="ram:0xFFFFAF"/>
+    <symbol name="SMR0"   address="ram:0xFFFFB0"/>
+    <symbol name="BRR0"   address="ram:0xFFFFB1"/>
+    <symbol name="SCR0"   address="ram:0xFFFFB2"/>
+    <symbol name="TDR0"   address="ram:0xFFFFB3"/>
+    <symbol name="SSR0"   address="ram:0xFFFFB4"/>
+    <symbol name="RDR0"   address="ram:0xFFFFB5"/>
+    <symbol name="SMR1"   address="ram:0xFFFFB8"/>
+    <symbol name="BRR1"   address="ram:0xFFFFB9"/>
+    <symbol name="SCR1"   address="ram:0xFFFFBA"/>
+    <symbol name="TDR1"   address="ram:0xFFFFBB"/>
+    <symbol name="SSR1"   address="ram:0xFFFFBC"/>
+    <symbol name="RDR1"   address="ram:0xFFFFBD"/>
+    <symbol name="SMR1"   address="ram:0xFFFFC5"/>
+    <symbol name="BRR1"   address="ram:0xFFFFC7"/>
+    <symbol name="SCR1"   address="ram:0xFFFFC9"/>
+    <symbol name="TDR1"   address="ram:0xFFFFCB"/>
+    <symbol name="SSR1"   address="ram:0xFFFFCD"/>
+    <symbol name="RDR1"   address="ram:0xFFFFCE"/>
+    <symbol name="RDR1"   address="ram:0xFFFFCF"/>
+    <symbol name="P9DDR"  address="ram:0xFFFFD0"/>
+    <symbol name="PADDR"  address="ram:0xFFFFD1"/>
+    <symbol name="P9DR"   address="ram:0xFFFFD2"/>
+    <symbol name="PADR"   address="ram:0xFFFFD3"/>
+    <symbol name="PBDDR"  address="ram:0xFFFFD4"/>
+    <symbol name="PBDR"   address="ram:0xFFFFD6"/>
+    <symbol name="P4PCR"  address="ram:0xFFFFDA"/>
+    <symbol name="ADDRBH" address="ram:0xFFFFE0"/>
+    <symbol name="ADDRBL" address="ram:0xFFFFE1"/>
+    <symbol name="ADDRBH" address="ram:0xFFFFE2"/>
+    <symbol name="ADDRBL" address="ram:0xFFFFE3"/>
+    <symbol name="ADDRCH" address="ram:0xFFFFE4"/>
+    <symbol name="ADDRCL" address="ram:0xFFFFE5"/>
+    <symbol name="ADDRDH" address="ram:0xFFFFE6"/>
+    <symbol name="ADDRDL" address="ram:0xFFFFE7"/>
+    <symbol name="ADCSR"  address="ram:0xFFFFE8"/>
+    <symbol name="ADCR"   address="ram:0xFFFFE9"/>
+    <symbol name="ABWCR"  address="ram:0xFFFFEC"/>
+    <symbol name="ASTCR"  address="ram:0xFFFFED"/>
+    <symbol name="WCR"    address="ram:0xFFFFEE"/>
+    <symbol name="WCER"   address="ram:0xFFFFEF"/>
+    <symbol name="MDCR"   address="ram:0xFFFFF1"/>
+    <symbol name="SYSCR"  address="ram:0xFFFFF2"/>
+    <symbol name="BRCR"   address="ram:0xFFFFF3"/>
+    <symbol name="ISCR"   address="ram:0xFFFFF4"/>
+    <symbol name="IER"    address="ram:0xFFFFF5"/>
+    <symbol name="ISR"    address="ram:0xFFFFF6"/>
+    <symbol name="IPRA"   address="ram:0xFFFFF8"/>
+    <symbol name="IPRB"   address="ram:0xFFFFF9"/>
+  </default_symbols>
+  
+  <default_memory_blocks>
+  	<!-- 512 bytes on-chip RAM -->
+    <memory_block name="INT_RAM" start_address="0xFFFD10" length="0x0200" initialized="false"/>
+    <!-- Peripheral register memory space -->
+    <memory_block name="PREG" start_address="0xFFFF1C" length="0xE4" initialized="false"/>
+  </default_memory_blocks>
 </processor_spec>
