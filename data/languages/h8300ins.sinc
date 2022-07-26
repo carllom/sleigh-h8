@@ -278,22 +278,22 @@ cc: "le" is lnyb=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
 	absaddr8.b = masked | ($(C_FLAG) << bit);
 }
 :btst "#"bit,dst_r8 is op8=0x73; invert=0 & bit & dst_r8 {
-	$(Z_FLAG) = ~(dst_r8 >> bit) & 1;
+	$(Z_FLAG) = (dst_r8 & 1<<bit) == 0;
 }
 :btst "#"bit,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x73; invert=0 & bit & lnyb=0 {
-	$(Z_FLAG) = ~(regind_src.b >> bit) & 1;
+	$(Z_FLAG) = (regind_src.b & 1<<bit) == 0;
 }
 :btst "#"bit,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x73; invert=0 & bit & lnyb=0 {
-	$(Z_FLAG) = ~(absaddr8.b >> bit) & 1;
+	$(Z_FLAG) = (absaddr8.b & 1<<bit) == 0;
 }
 :btst src_r8,dst_r8 is op8=0x63; src_r8 & dst_r8 {
-	$(Z_FLAG) = ~(dst_r8 >> (src_r8 & 7)) & 1;
+	$(Z_FLAG) = (dst_r8 & 1<<src_r8) == 0;
 }
 :btst src_r8,regind_src.b is op8=0x7C; regind_src.b & lnyb=0; op8=0x63; src_r8 & lnyb=0 {
-	$(Z_FLAG) = ~(regind_src.b >> (src_r8 & 7)) & 1;
+	$(Z_FLAG) = (regind_src.b & 1<<src_r8) == 0;
 }
 :btst src_r8,absaddr8.b is op8=0x7E; absaddr8.b; op8=0x63; src_r8 & lnyb=0 {
-	$(Z_FLAG) = ~(absaddr8.b >> (src_r8 & 7)) & 1;
+	$(Z_FLAG) = (absaddr8.b & 1<<src_r8) == 0;
 }
 :bxor "#"bit,dst_r8 is op8=0x75; invert=0 & bit & dst_r8 {
 	local rbit = ((dst_r8 >> bit) & 1);
