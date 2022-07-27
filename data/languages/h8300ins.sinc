@@ -44,7 +44,6 @@ attach variables [ reg16hi reg16lo reg3lo reg3hi ] [ r0 r1 r2 r3 r4 r5 r6 r7 ];
 # H8/300 instructions
 
 addr8: "@"imm8 is imm8 { export *:2 imm8; }
-addr16: "@"imm16 is imm16 { export *:2 imm16; }
 absaddr8.b: "@"tmp is imm8 [ tmp = 0xFFFF00 + imm8; ] { export *:1 tmp; }
 absaddr16.b: "@"addr is b15=1 & imm16 [ addr = 0xFF0000 + imm16; ] { export *:1 addr; }
 absaddr16.b: "@"imm16 is b15=0 & imm16 { export *:1 imm16; }
@@ -397,22 +396,22 @@ cc: "le" is lnyb=15 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
 :mov.w src_r16,dst_r16 is op8=0x0D; src_r16 & dst_r16 { dst_r16 = src_r16; movflags(dst_r16); }
 :mov.b op_imm8,dst_r8 is op4=0xF & dst_r8; op_imm8 { dst_r8 = op_imm8; movflags(dst_r8); }
 :mov.b @src_r3b,dst_r8 is op8=0x68; src_r3b & dst_r8 { dst_r8 = *:1 src_r3b; movflags(dst_r8); }
-:mov.b @(imm16,src_r3b),dst_r8 is op8=0x6E; src_r3b & dst_r8; imm16 { local tmp = src_r3b + imm16; dst_r8 = *:1 tmp; movflags(dst_r8); }
+:mov.b @(simm16,src_r3b),dst_r8 is op8=0x6E; src_r3b & dst_r8; simm16 { local tmp = src_r3b + simm16; dst_r8 = *:1 tmp; movflags(dst_r8); }
 :mov.b @src_r3b+,dst_r8 is op8=0x6C; src_r3b & dst_r8 { dst_r8 = *:1 src_r3b; src_r3b = src_r3b + 1; movflags(dst_r8); }
 :mov.b absaddr8.b,dst_r8 is op4=0x2 & dst_r8; absaddr8.b { dst_r8 = absaddr8.b; movflags(dst_r8); }
 :mov.b absaddr16.b,dst_r8 is op8=0x6A; hnyb=0 & dst_r8; absaddr16.b { dst_r8 = absaddr16.b; movflags(dst_r8); }
 :mov.w op_imm16,dst_r16 is op8=0x79; hnyb=0 & dst_r16; op_imm16 { dst_r16 = op_imm16; movflags(dst_r16); }
 :mov.w @src_r3b,dst_r16 is op8=0x69; src_r3b & dst_r16 { dst_r16 = *:2 src_r3b; movflags(dst_r16); }
-:mov.w @(imm16,src_r3b),dst_r16 is op8=0x6F; src_r3b & dst_r16; imm16 { local tmp = src_r3b + imm16; dst_r16 = *:2 tmp; movflags(dst_r16); }
+:mov.w @(simm16,src_r3b),dst_r16 is op8=0x6F; src_r3b & dst_r16; simm16 { local tmp = src_r3b + simm16; dst_r16 = *:2 tmp; movflags(dst_r16); }
 :mov.w @src_r3b+,dst_r16 is op8=0x6D; src_r3b & dst_r16 { dst_r16 = *:2 src_r3b; src_r3b = src_r3b + 2; movflags(dst_r16); }
 :mov.w absaddr16.w,dst_r16 is op8=0x6B; hnyb=0 & dst_r16; absaddr16.w { dst_r16 = absaddr16.w; movflags(dst_r16); }
 :mov.b dst_r8,@src_r3b1 is op8=0x68; src_r3b1 & dst_r8 { *:1 src_r3b1 = dst_r8; movflags(dst_r8); }
-:mov.b dst_r8,@(imm16,src_r3b1) is op8=0x6E; src_r3b1 & dst_r8; imm16 { local tmp = src_r3b1 + imm16; *:1 tmp = dst_r8; movflags(dst_r8); }
+:mov.b dst_r8,@(simm16,src_r3b1) is op8=0x6E; src_r3b1 & dst_r8; simm16 { local tmp = src_r3b1 + simm16; *:1 tmp = dst_r8; movflags(dst_r8); }
 :mov.b dst_r8,@-src_r3b1 is op8=0x6C; src_r3b1 & dst_r8 { src_r3b1 = src_r3b1 - 1; *:1 src_r3b1 = dst_r8; movflags(dst_r8); }
 :mov.b dst_r8,absaddr8.b is op4=0x3 & dst_r8; absaddr8.b { absaddr8.b = dst_r8; movflags(dst_r8); }
 :mov.b dst_r8,absaddr16.b is op8=0x6A; hnyb=8 & dst_r8; absaddr16.b { absaddr16.b = dst_r8; movflags(dst_r8); }
 :mov.w dst_r16,@src_r3b1 is op8=0x69; src_r3b1 & dst_r16 { *:2 src_r3b1 = dst_r16; movflags(dst_r16); }
-:mov.w dst_r16,@(imm16,src_r3b1) is op8=0x6F; src_r3b1 & dst_r16; imm16 { local tmp = src_r3b1 + imm16; *:2 tmp = dst_r16; movflags(dst_r16); }
+:mov.w dst_r16,@(simm16,src_r3b1) is op8=0x6F; src_r3b1 & dst_r16; simm16 { local tmp = src_r3b1 + simm16; *:2 tmp = dst_r16; movflags(dst_r16); }
 :mov.w dst_r16,@-src_r3b1 is op8=0x6D; src_r3b1 & dst_r16 { src_r3b1 = src_r3b1 - 2; *:2 src_r3b1 = dst_r16; movflags(dst_r16); }
 :mov.w dst_r16,absaddr16.w is op8=0x6B; hnyb=8 & dst_r16; absaddr16.w { absaddr16.w = dst_r16; movflags(dst_r16); }
 :movfpe absaddr16.b,dst_r8 is op8=0x6A; hnyb=4 & dst_r8; absaddr16.b { dst_r8 = absaddr16.b; movflags(dst_r8); }

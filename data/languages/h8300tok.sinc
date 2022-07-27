@@ -40,4 +40,5 @@ define token ins2(16)
     b15=(15,15)
 	op16=(0,15)
 	imm16=(0,15)
+	simm16=(0,15) signed
 ;

@@ -100,10 +100,6 @@ define token hins1(8)
   xb3=(3,3)
 ;
 
-define token hins2(16)
-  simm16=(0,15) signed
-;
-
 define token hins3(24)
   op24=(0,23)
   imm24=(0,23)
@@ -301,7 +297,7 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 
 
 :ldc.w @src_r32,"ccr" is op24=0x014069; src_r32 & lnyb=0 { ccr_w(*:1 src_r32); }
-:ldc.w @(imm16,src_r32),"ccr" is op24=0x01406F; src_r32 & lnyb=0; imm16 { local tmp = src_r32 + imm16; ccr_w(*:1 tmp); }
+:ldc.w @(simm16,src_r32),"ccr" is op24=0x01406F; src_r32 & lnyb=0; simm16 { local tmp = src_r32 + simm16; ccr_w(*:1 tmp); }
 :ldc.w @(imm24,src_r32),"ccr" is op24=0x014078; src_r32 & lnyb=0; op24=0x6B2000; imm24 { local tmp = src_r32 + imm24; ccr_w(*:1 tmp); }
 :ldc.w @src_r32+,"ccr" is op24=0x01406D; src_r32 & lnyb=0 { ccr_w(*:1 src_r32); src_r32 = src_r32 + 2; }
 :ldc.w absaddr16.w,"ccr" is op24=0x01406B; op8=0; absaddr16.w { ccr_w(absaddr16.w:1); }
@@ -313,7 +309,7 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 :mov.w absaddr24.w,dst_r16 is op8=0x6B; op4=2 & dst_r16; op8=0; absaddr24.w { dst_r16 = absaddr24.w; movflags(dst_r16); }
 :mov.l op_imm32,dst_r32 is op8=0x7A; op4=0 & dst_r32; op_imm32 { dst_r32 = op_imm32; movflags(dst_r32); }
 :mov.l @src_r32,dst_r32 is op24=0x010069; src_r32 & dst_r32 { dst_r32 = *:4 src_r32; movflags(dst_r32); }
-:mov.l @(imm16,src_r32),dst_r32 is op24=0x01006F; src_r32 & dst_r32; imm16 { local tmp = src_r32 + imm16; dst_r32 = *:4 tmp; movflags(dst_r32); }
+:mov.l @(simm16,src_r32),dst_r32 is op24=0x01006F; src_r32 & dst_r32; simm16 { local tmp = src_r32 + simm16; dst_r32 = *:4 tmp; movflags(dst_r32); }
 :mov.l @(imm24,src_r32),dst_r32 is op24=0x010078; src_r32 & lnyb=0; op8=0x6B; op4=2 & dst_r32; op8=0; imm24 { local tmp = src_r32 + imm24; dst_r32 = *:4 tmp; movflags(dst_r32); }
 :mov.l @src_r32+,dst_r32 is op24=0x01006D; src_r32 & dst_r32 { dst_r32 = *:4 src_r32; src_r32 = src_r32 + 4; movflags(dst_r32); }
 :mov.l absaddr16.l,dst_r32 is op24=0x01006B; op4=0 & dst_r32; absaddr16.l { dst_r32 = absaddr16.l; movflags(dst_r32); }
@@ -323,7 +319,7 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 :mov.w dst_r16,@(imm24,src_r32) is op8=0x78; src_r32 & lnyb=0; op8=0x6B; op4=0xA & dst_r16; op8=0; imm24 { local tmp = src_r32 + imm24; *:2 tmp = dst_r16; movflags(dst_r16); }
 :mov.w dst_r16,absaddr24.w is op8=0x6B; op4=0xA & dst_r16; op8=0; absaddr24.w { absaddr24.w = dst_r16; movflags(dst_r16); }
 :mov.l dst_r32,@src_r321 is op24=0x010069; src_r321 & dst_r32 { *:4 src_r321 = dst_r32; movflags(dst_r32); }
-:mov.l dst_r32,@(imm16,src_r321) is op24=0x01006F; src_r321 & dst_r32; imm16 { local tmp = src_r321 + imm16; *:4 tmp = dst_r32; movflags(dst_r32); }
+:mov.l dst_r32,@(simm16,src_r321) is op24=0x01006F; src_r321 & dst_r32; simm16 { local tmp = src_r321 + simm16; *:4 tmp = dst_r32; movflags(dst_r32); }
 :mov.l dst_r32,@(imm24,src_r321) is op24=0x010078; src_r321 & lnyb=0; op8=0x6B; op4=0xA & dst_r32; op8=0; imm24 { local tmp = src_r321 + imm24; *:4 tmp = dst_r32; movflags(dst_r32); }
 :mov.l dst_r32,@-src_r321 is op24=0x01006D; src_r321 & dst_r32 { src_r321 = src_r321 - 4; *:4 src_r321 = dst_r32; movflags(dst_r32); }
 :mov.l dst_r32,absaddr16.l is op24=0x01006B; op4=8 & dst_r32; absaddr16.l { absaddr16.l = dst_r32; movflags(dst_r32); }
@@ -447,7 +443,7 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 	movflags(dst_r32);
 }
 :stc.w "ccr",@src_r321 is op24=0x014069; src_r321 & lnyb=0 { local ccr; ccr_r(ccr); *:1 src_r321 = ccr; }
-:stc.w "ccr",@(imm16,src_r321) is op24=0x01406F; src_r321 & lnyb=0; imm16 { local ccr; ccr_r(ccr); local dest = src_r321 + imm16; *:1 dest = ccr; }
+:stc.w "ccr",@(simm16,src_r321) is op24=0x01406F; src_r321 & lnyb=0; simm16 { local ccr; ccr_r(ccr); local dest = src_r321 + simm16; *:1 dest = ccr; }
 :stc.w "ccr",@(imm24,src_r32) is op24=0x014078; src_r32 & lnyb=0; op24=0x6BA000; imm24 { local ccr; ccr_r(ccr); local dest= src_r32 + imm24; *:1 dest = ccr; }
 :stc.w "ccr",@-src_r321 is op24=0x01406D; src_r321 & lnyb=0 { src_r321 = src_r321-2; local ccr; ccr_r(ccr); *:1 src_r321 = ccr; }
 :stc.w "ccr",absaddr16.w is op24=0x01406B; op8=0x80; absaddr16.w { local ccr:1; ccr_r(ccr); absaddr16.w = zext(ccr); }
