@@ -20,29 +20,67 @@ define register offset=0 size=4 [er0 er1 er2 er3 er4 er5 er6 er7];
 define register offset=0 size=2 [e0 r0 e1 r1 e2 r2 e3 r3 e4 r4 e5 r5 e6 r6 e7 r7];
 define register offset=0 size=1 [_ _ r0h r0l _ _ r1h r1l _ _ r2h r2l _ _ r3h r3l _ _ r4h r4l _ _ r5h r5l _ _ r6h r6l _ _ r7h r7l];
 define register offset=0x100 size=3 [pc];
-define register offset=0x200 size=1 [ccr];
+# define register offset=0x200 size=1 [ccr];
+define register offset=0x200 size=1 [C V Z N U H UI I];
 
 # CCR Flags
-@define I_FLAG   "ccr[7,1]"
-@define UI_FLAG  "ccr[6,1]"
-@define H_FLAG   "ccr[5,1]"
-@define U_FLAG   "ccr[4,1]"
-@define N_FLAG   "ccr[3,1]"
-@define Z_FLAG   "ccr[2,1]"
-@define V_FLAG   "ccr[1,1]"
-@define C_FLAG   "ccr[0,1]"
+#@define I_FLAG   "ccr[7,1]"
+#@define UI_FLAG  "ccr[6,1]"
+#@define H_FLAG   "ccr[5,1]"
+#@define U_FLAG   "ccr[4,1]"
+#@define N_FLAG   "ccr[3,1]"
+#@define Z_FLAG   "ccr[2,1]"
+#@define V_FLAG   "ccr[1,1]"
+#@define C_FLAG   "ccr[0,1]"
+
+@define I_FLAG   "I"
+@define UI_FLAG  "UI"
+@define H_FLAG   "H"
+@define U_FLAG   "U"
+@define N_FLAG   "N"
+@define Z_FLAG   "Z"
+@define V_FLAG   "V"
+@define C_FLAG   "C"
+
 
 @define SP "er7"
+
+macro ccr_r(dst) {
+	local ccr:1 = 0;
+	ccr[7,1] = I;
+	ccr[6,1] = UI;
+	ccr[5,1] = H;
+	ccr[4,1] = U;
+	ccr[3,1] = N;
+	ccr[2,1] = Z;
+ 	ccr[1,1] = V;
+	ccr[0,1] = C;
+	dst = ccr;
+}
+
+macro ccr_w(ccr)
+{
+	I = ccr[7,1];
+	UI = ccr[6,1];
+	H = ccr[5,1];
+	U = ccr[4,1];
+	N = ccr[3,1];
+	Z = ccr[2,1];
+ 	V = ccr[1,1];
+	C = ccr[0,1];
+}
 
 # PC is stored on stack in lower 24 bits of 32 bit word.
 macro pushpc() { er7 = er7-4; *:3 (er7+1) = &:3 inst_next; }
 macro poppc() { pc = *:3 (er7+1); er7 = er7+4; }
 macro pushpcccr() { 
   pushpc();
+  local ccr:1;
+  ccr_r(ccr);
   *:1 er7 = ccr; # CCR stored in top byte of 32 bit word
 }
 macro poppcccr() { 
-  ccr = *:1 er7; # CCR stored in top byte of 32 bit word
+  ccr_w(*:1 er7); # CCR stored in top byte of 32 bit word
   poppc();
 }
 
@@ -262,12 +300,12 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 @endif
 
 
-:ldc.w @src_r32,"ccr" is op24=0x014069; src_r32 & lnyb=0 { ccr = *:1 src_r32; }
-:ldc.w @(imm16,src_r32),"ccr" is op24=0x01406F; src_r32 & lnyb=0; imm16 { local tmp = src_r32 + imm16; ccr = *:1 tmp; }
-:ldc.w @(imm24,src_r32),"ccr" is op24=0x014078; src_r32 & lnyb=0; op24=0x6B2000; imm24 { local tmp = src_r32 + imm24; ccr = *:1 tmp; }
-:ldc.w @src_r32+,"ccr" is op24=0x01406D; src_r32 & lnyb=0 { ccr = *:1 src_r32; src_r32 = src_r32 + 2; }
-:ldc.w absaddr16.w,"ccr" is op24=0x01406B; op8=0; absaddr16.w { ccr = absaddr16.w:1; }
-:ldc.w absaddr24.w,"ccr" is op24=0x01406B; op16=0x2000; absaddr24.w { ccr = absaddr24.w:1; }
+:ldc.w @src_r32,"ccr" is op24=0x014069; src_r32 & lnyb=0 { ccr_w(*:1 src_r32); }
+:ldc.w @(imm16,src_r32),"ccr" is op24=0x01406F; src_r32 & lnyb=0; imm16 { local tmp = src_r32 + imm16; ccr_w(*:1 tmp); }
+:ldc.w @(imm24,src_r32),"ccr" is op24=0x014078; src_r32 & lnyb=0; op24=0x6B2000; imm24 { local tmp = src_r32 + imm24; ccr_w(*:1 tmp); }
+:ldc.w @src_r32+,"ccr" is op24=0x01406D; src_r32 & lnyb=0 { ccr_w(*:1 src_r32); src_r32 = src_r32 + 2; }
+:ldc.w absaddr16.w,"ccr" is op24=0x01406B; op8=0; absaddr16.w { ccr_w(absaddr16.w:1); }
+:ldc.w absaddr24.w,"ccr" is op24=0x01406B; op16=0x2000; absaddr24.w { ccr_w(absaddr24.w:1); }
 :mov.l src_r321,dst_r32 is op8=0x0F; src_r321 & dst_r32 { dst_r32 = src_r321; movflags(dst_r32); }
 :mov.b @(imm24,src_r32),dst_r8 is op8=0x78; src_r32 & lnyb=0; op8=0x6A; op4=2 & dst_r8; op8=0; imm24 { local tmp = src_r32 + imm24; dst_r8 = *:1 tmp; movflags(dst_r8); }
 :mov.b absaddr24.b,dst_r8 is op8=0x6A; op4=2 & dst_r8; op8=0; absaddr24.b { dst_r8 = absaddr24.b; movflags(dst_r8); }
@@ -408,12 +446,12 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 	dst_r32 = dst_r32 >> 1;
 	movflags(dst_r32);
 }
-:stc.w "ccr",@src_r321 is op24=0x014069; src_r321 & lnyb=0 { *:1 src_r321 = ccr; }
-:stc.w "ccr",@(imm16,src_r321) is op24=0x01406F; src_r321 & lnyb=0; imm16 { local tmp = src_r321 + imm16; *:1 tmp = ccr; }
-:stc.w "ccr",@(imm24,src_r32) is op24=0x014078; src_r32 & lnyb=0; op24=0x6BA000; imm24 { local tmp = src_r32 + imm24; *:1 tmp = ccr; }
-:stc.w "ccr",@-src_r321 is op24=0x01406D; src_r321 & lnyb=0 { src_r321 = src_r321-2; *:1 src_r321 = ccr; }
-:stc.w "ccr",absaddr16.w is op24=0x01406B; op8=0x80; absaddr16.w { absaddr16.w = zext(ccr); }
-:stc.w "ccr",absaddr24.w is op24=0x01406B; op16=0xA000; absaddr24.w { absaddr24.w = zext(ccr); }
+:stc.w "ccr",@src_r321 is op24=0x014069; src_r321 & lnyb=0 { local ccr; ccr_r(ccr); *:1 src_r321 = ccr; }
+:stc.w "ccr",@(imm16,src_r321) is op24=0x01406F; src_r321 & lnyb=0; imm16 { local ccr; ccr_r(ccr); local dest = src_r321 + imm16; *:1 dest = ccr; }
+:stc.w "ccr",@(imm24,src_r32) is op24=0x014078; src_r32 & lnyb=0; op24=0x6BA000; imm24 { local ccr; ccr_r(ccr); local dest= src_r32 + imm24; *:1 dest = ccr; }
+:stc.w "ccr",@-src_r321 is op24=0x01406D; src_r321 & lnyb=0 { src_r321 = src_r321-2; local ccr; ccr_r(ccr); *:1 src_r321 = ccr; }
+:stc.w "ccr",absaddr16.w is op24=0x01406B; op8=0x80; absaddr16.w { local ccr:1; ccr_r(ccr); absaddr16.w = zext(ccr); }
+:stc.w "ccr",absaddr24.w is op24=0x01406B; op16=0xA000; absaddr24.w { local ccr:1; ccr_r(ccr); absaddr24.w = zext(ccr); }
 
 :sub.w op_imm16,dst_r16 is op8=0x79; op4=3 & dst_r16; op_imm16 {
   subflags11(dst_r16,op_imm16);
