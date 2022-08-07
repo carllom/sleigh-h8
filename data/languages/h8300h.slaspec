@@ -226,10 +226,18 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 	dst_r32 = dst_r32 - 2;
 	resflags(dst_r32);
 }
-
-:divxs.b src_r8,dst_r16 is op24=0x01D051; src_r8 & dst_r16 unimpl
-:divxs.w src_r16,dst_r32 is op24=0x01D053; src_r16 & dst_r32 unimpl
-
+:divxs.b src_r8,dst_r16 is op24=0x01D051; src_r8 & dst_r16 {
+	local rem = dst_r16 s% sext(src_r8);
+	local quot = dst_r16 s/ sext(src_r8);
+	dst_r16 = rem << 8 | quot;
+	resflags(src_r8);
+}
+:divxs.w src_r16,dst_r32 is op24=0x01D053; src_r16 & dst_r32 {
+	local rem = dst_r32 s% sext(src_r16);
+	local quot = dst_r32 s/ sext(src_r16);
+	dst_r32 = rem << 16 | quot;
+	resflags(src_r16);
+}
 :divxu.w src_r16,dst_r32 is op8=0x53; src_r16 & dst_r32 {
 	local rem = dst_r32 % sext(src_r16);
 	local quot = dst_r32 / sext(src_r16);
