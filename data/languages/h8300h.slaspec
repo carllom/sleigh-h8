@@ -85,9 +85,9 @@ macro poppcccr() {
 }
 
 macro subflags27(operand1,operand2) {
-  $(H_FLAG) = (operand1 & 0x0FFFFF) < (operand2 & 0x0FFFFF);
-  $(V_FLAG) = sborrow(operand1,operand2);
-  $(C_FLAG) = operand1 < operand2;
+  H = (operand1 & 0x0FFFFF) < (operand2 & 0x0FFFFF);
+  V = sborrow(operand1,operand2);
+  C = operand1 < operand2;
 }
 
 #@define asize "3"
@@ -136,20 +136,20 @@ op_imm32: "#"imm32 is imm32 { export *[const]:4 imm32; }
 
 cc2: "ra" is hnyb=0 & lnyb=0 { export 1:1; }
 cc2: "rn" is hnyb=1 & lnyb=0 { export 0:1; }
-cc2: "hi" is hnyb=2 & lnyb=0 { tmp:1 = !($(C_FLAG) || $(Z_FLAG)); export tmp; }
-cc2: "ls" is hnyb=3 & lnyb=0 { tmp:1 = $(C_FLAG) || $(Z_FLAG); export tmp; }
-cc2: "cc" is hnyb=4 & lnyb=0 { tmp:1 = !$(C_FLAG); export tmp; }
-cc2: "cs" is hnyb=5 & lnyb=0 { tmp:1 = $(C_FLAG); export tmp; }
-cc2: "ne" is hnyb=6 & lnyb=0 { tmp:1 = !$(Z_FLAG); export tmp; }
-cc2: "eq" is hnyb=7 & lnyb=0 { tmp:1 = $(Z_FLAG); export tmp; }
-cc2: "vc" is hnyb=8 & lnyb=0 { tmp:1 = !$(V_FLAG); export tmp; }
-cc2: "vs" is hnyb=9 & lnyb=0 { tmp:1 = $(V_FLAG); export tmp; }
-cc2: "pl" is hnyb=10 & lnyb=0 { tmp:1 = !$(N_FLAG); export tmp; }
-cc2: "mi" is hnyb=11 & lnyb=0 { tmp:1 = $(N_FLAG); export tmp; }
-cc2: "ge" is hnyb=12 & lnyb=0 { tmp:1 = ($(V_FLAG)==$(N_FLAG)); export tmp; }
-cc2: "lt" is hnyb=13 & lnyb=0 { tmp:1 = ($(V_FLAG)!=$(N_FLAG)); export tmp; }
-cc2: "gt" is hnyb=14 & lnyb=0 { tmp:1 = !$(Z_FLAG) && ($(V_FLAG)==$(N_FLAG)); export tmp; }
-cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); export tmp; }
+cc2: "hi" is hnyb=2 & lnyb=0 { tmp:1 = !(C || Z); export tmp; }
+cc2: "ls" is hnyb=3 & lnyb=0 { tmp:1 = C || Z; export tmp; }
+cc2: "cc" is hnyb=4 & lnyb=0 { tmp:1 = !C; export tmp; }
+cc2: "cs" is hnyb=5 & lnyb=0 { tmp:1 = C; export tmp; }
+cc2: "ne" is hnyb=6 & lnyb=0 { tmp:1 = !Z; export tmp; }
+cc2: "eq" is hnyb=7 & lnyb=0 { tmp:1 = Z; export tmp; }
+cc2: "vc" is hnyb=8 & lnyb=0 { tmp:1 = !V; export tmp; }
+cc2: "vs" is hnyb=9 & lnyb=0 { tmp:1 = V; export tmp; }
+cc2: "pl" is hnyb=10 & lnyb=0 { tmp:1 = !N; export tmp; }
+cc2: "mi" is hnyb=11 & lnyb=0 { tmp:1 = N; export tmp; }
+cc2: "ge" is hnyb=12 & lnyb=0 { tmp:1 = (V==N); export tmp; }
+cc2: "lt" is hnyb=13 & lnyb=0 { tmp:1 = (V!=N); export tmp; }
+cc2: "gt" is hnyb=14 & lnyb=0 { tmp:1 = !Z && (V==N); export tmp; }
+cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 
 
 :add.w op_imm16,dst_r16 is op8=0x79; op4=1 & dst_r16; op_imm16 {
@@ -207,22 +207,22 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 	resflags(dst_r32-src_r321);
 }
 :dec.w "#"1,dst_r16 is op8=0x1B; hnyb=5 & dst_r16 {
-	$(V_FLAG) = dst_r16 == 0x8000;
+	V = dst_r16 == 0x8000;
 	dst_r16 = dst_r16 - 1;
 	resflags(dst_r16);
 }
 :dec.w "#"2,dst_r16 is op8=0x1B; hnyb=0xD & dst_r16 {
-	$(V_FLAG) = dst_r16 == 0x8000 | dst_r16 == 0x8001;
+	V = dst_r16 == 0x8000 | dst_r16 == 0x8001;
 	dst_r16 = dst_r16 - 2;
 	resflags(dst_r16);
 }
 :dec.l "#"1,dst_r32 is op8=0x1B; hnyb=7 & dst_r32 {
-	$(V_FLAG) = dst_r32 == 0x80000000;
+	V = dst_r32 == 0x80000000;
 	dst_r32 = dst_r32 - 1;
 	resflags(dst_r32);
 }
 :dec.l "#"2,dst_r32 is op8=0x1B; hnyb=0xF & dst_r32 {
-	$(V_FLAG) = dst_r32 == 0x80000000 | dst_r32 == 0x80000001;
+	V = dst_r32 == 0x80000000 | dst_r32 == 0x80000001;
 	dst_r32 = dst_r32 - 2;
 	resflags(dst_r32);
 }
@@ -272,22 +272,22 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 }
 
 :inc.w "#"1,dst_r16 is op8=0x0B; hnyb=5 & dst_r16 {
-	$(V_FLAG) = dst_r16 == 0x7FFF;
+	V = dst_r16 == 0x7FFF;
 	dst_r16 = dst_r16 + 1;
 	resflags(dst_r16);
 }
 :inc.w "#"2,dst_r16 is op8=0x0B; hnyb=0xD & dst_r16 {
-	$(V_FLAG) = dst_r16 == 0x7FFF | dst_r16 == 0x7FFE;
+	V = dst_r16 == 0x7FFF | dst_r16 == 0x7FFE;
 	dst_r16 = dst_r16 + 2;
 	resflags(dst_r16);
 }
 :inc.l "#"1,dst_r32 is op8=0x0B; hnyb=7 & dst_r32 {
-	$(V_FLAG) = dst_r32 == 0x80000000;
+	V = dst_r32 == 0x80000000;
 	dst_r32 = dst_r32 + 1;
 	resflags(dst_r32);
 }
 :inc.l "#"2,dst_r32 is op8=0x0B; hnyb=0xF & dst_r32 {
-	$(V_FLAG) = dst_r32 == 0x7FFFFFFF | dst_r32 == 0x7FFFFFFE;
+	V = dst_r32 == 0x7FFFFFFF | dst_r32 == 0x7FFFFFFE;
 	dst_r32 = dst_r32 + 2;
 	resflags(dst_r32);
 }
@@ -363,90 +363,90 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 	local c = dst_r16 >> 15;
 	dst_r16 = (dst_r16 << 1) | c;
 	movflags(dst_r16);
-	$(C_FLAG) = (c != 0);
+	C = (c != 0);
 }
 :rotl.l dst_r32 is op8=0x12; op4=0xB & dst_r32 {
 	local c = dst_r32 >> 31;
 	dst_r32 = (dst_r32 << 1) | c;
-	$(C_FLAG) = (c != 0);
+	C = (c != 0);
 	movflags(dst_r32);
 }
 :rotr.w dst_r16 is op8=0x13; op4=9 & dst_r16 {
 	local c = dst_r16 & 1;
 	dst_r16 = (c << 15) | (dst_r16 >> 1);
-	$(C_FLAG) = (c != 0);
+	C = (c != 0);
 	movflags(dst_r16);
 }
 :rotr.l dst_r32 is op8=0x13; op4=0xB & dst_r32 {
 	local c = dst_r32 & 1;
 	dst_r32 = (c << 31) | (dst_r32 >> 1);
-	$(C_FLAG) = (c != 0);
+	C = (c != 0);
 	movflags(dst_r32);
 }
 :rotxl.w dst_r16 is op8=0x12; op4=1 & dst_r16 {
-	local c:2 = zext($(C_FLAG));
-	$(C_FLAG) = (dst_r16 >> 15) != 0;
+	local c:2 = zext(C);
+	C = (dst_r16 >> 15) != 0;
 	dst_r16 = (dst_r16 << 1) | c;
 	movflags(dst_r16);
 }
 :rotxl.l dst_r32 is op8=0x12; op4=3 & dst_r32 {
-	local c:4 = zext($(C_FLAG));
-	$(C_FLAG) = (dst_r32 >> 31) != 0;
+	local c:4 = zext(C);
+	C = (dst_r32 >> 31) != 0;
 	dst_r32 = (dst_r32 << 1) | c;
 	movflags(dst_r32);
 }
 :rotxr.w dst_r16 is op8=0x13; op4=1 & dst_r16 {
-	local c:2 = zext($(C_FLAG));
-	$(C_FLAG) = (dst_r16 & 1) != 0;
+	local c:2 = zext(C);
+	C = (dst_r16 & 1) != 0;
 	dst_r16 = (c << 15) | (dst_r16 >> 1);
 	movflags(dst_r16);
 }
 :rotxr.l dst_r32 is op8=0x13; op4=3 & dst_r32 {
-	local c:4 = zext($(C_FLAG));
-	$(C_FLAG) = (dst_r32 & 1) != 0;
+	local c:4 = zext(C);
+	C = (dst_r32 & 1) != 0;
 	dst_r32 = (c << 31) | (dst_r32 >> 1);
 	movflags(dst_r32);
 }
 
 :shal.w dst_r16 is op8=0x10; op4=9 & dst_r16 {
-	$(V_FLAG) = (dst_r16 & 0x8000) != 0;
-	$(C_FLAG) = $(V_FLAG);
+	V = (dst_r16 & 0x8000) != 0;
+	C = V;
 	dst_r16 = dst_r16 << 1;
 	resflags(dst_r16);
 }
 :shal.l dst_r32 is op8=0x10; op4=0xB & dst_r32 {
-	$(V_FLAG) = (dst_r32 & 0x80000000) != 0;
-	$(C_FLAG) = $(V_FLAG);
+	V = (dst_r32 & 0x80000000) != 0;
+	C = V;
 	dst_r32 = dst_r32 << 1;
 	resflags(dst_r32);
 }
 :shar.w dst_r16 is op8=0x11; op4=9 & dst_r16 {
-	$(C_FLAG) = (dst_r16 & 1) != 0;
+	C = (dst_r16 & 1) != 0;
 	dst_r16 = dst_r16 s>> 1;
 	movflags(dst_r16);
 }
 :shar.l dst_r32 is op8=0x11; op4=0xB & dst_r32 {
-	$(C_FLAG) = (dst_r32 & 1) != 0;
+	C = (dst_r32 & 1) != 0;
 	dst_r32 = dst_r32 s>> 1;
 	movflags(dst_r32);
 }
 :shll.w dst_r16 is op8=0x10; op4=1 & dst_r16 {
-	$(C_FLAG) = (dst_r16 & 0x8000) != 0;
+	C = (dst_r16 & 0x8000) != 0;
 	dst_r16 = dst_r16 << 1;
 	movflags(dst_r16);
 }
 :shll.l dst_r32 is op8=0x10; op4=3 & dst_r32 {
-	$(C_FLAG) = (dst_r32 & 0x80000000) != 0;
+	C = (dst_r32 & 0x80000000) != 0;
 	dst_r32 = dst_r32 << 1;
 	movflags(dst_r32);
 }
 :shlr.w dst_r16 is op8=0x11; op4=1 & dst_r16 {
-	$(C_FLAG) = (dst_r16 & 1) != 0;
+	C = (dst_r16 & 1) != 0;
 	dst_r16 = dst_r16 >> 1;
 	movflags(dst_r16);
 }
 :shlr.l dst_r32 is op8=0x11; op4=3 & dst_r32 {
-	$(C_FLAG) = (dst_r32 & 1) != 0;
+	C = (dst_r32 & 1) != 0;
 	dst_r32 = dst_r32 >> 1;
 	movflags(dst_r32);
 }
@@ -481,7 +481,7 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = $(Z_FLAG) || ($(V_FLAG)!=$(N_FLAG)); exp
 
 :trapa "#"trapn is op8=0x57; b67=0 & trapn & lnyb=0 {
   pushpcccr();
-  $(I_FLAG) = 1;
+  I = 1;
   # vec:3 = *:2 0x10 + (trapn * 2);
   # vec = vec << 1;
   # call [vec];
