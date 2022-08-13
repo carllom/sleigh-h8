@@ -40,7 +40,7 @@
         <pentry minsize="1" maxsize="4">
           <register name="er1"/>
         </pentry>
-        <pentry minsize="1" maxsize="500" align="4">
+        <pentry minsize="1" maxsize="500" align="2">
           <addr offset="4" space="stack"/>
         </pentry>
       </input>
@@ -54,7 +54,9 @@
       </unaffected>
 <!-- 
       <killedbycall>
-        <register name="r1"/>
+        <register name="er0"/>
+        <register name="er1"/>
+        <register name="er2"/>
       </killedbycall>
 -->
     </prototype>
