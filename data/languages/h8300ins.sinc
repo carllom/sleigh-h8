@@ -365,7 +365,7 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 }
 
 :jmp regind_src.b is op8=0x59; regind_src.b & lnyb=0 {
-	goto regind_src.b;
+	goto [regind_src.b];
 }
 @ifndef ADVANCED
 :jmp addr16 is op8=0x5A; op8=0; addr16 {
