@@ -377,7 +377,7 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 }
 :jsr regind_src.b is op8=0x5D; regind_src.b & lnyb=0 {
 	pushpc();
-	call regind_src.b;
+	call [regind_src.b];
 }
 @ifndef ADVANCED
 :jsr addr16 is op8=0x5E; op8=0; addr16 {
