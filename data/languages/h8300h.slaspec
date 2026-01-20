@@ -285,7 +285,7 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 	resflags(dst_r16);
 }
 :inc.l "#"1,dst_r32 is op8=0x0B; hnyb=7 & dst_r32 {
-	V = dst_r32 == 0x80000000;
+	V = dst_r32 == 0x7FFFFFFF;
 	dst_r32 = dst_r32 + 1;
 	resflags(dst_r32);
 }
