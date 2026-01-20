@@ -229,20 +229,23 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 :divxs.b src_r8,dst_r16 is op24=0x01D051; src_r8 & dst_r16 {
 	local rem = dst_r16 s% sext(src_r8);
 	local quot = dst_r16 s/ sext(src_r8);
-	dst_r16 = rem << 8 | quot;
-	resflags(src_r8);
+	dst_r16 = (rem << 8) | (quot & 0xFF);
+	N = (quot & 0x80) != 0;
+	Z = src_r8 == 0;
 }
 :divxs.w src_r16,dst_r32 is op24=0x01D053; src_r16 & dst_r32 {
 	local rem = dst_r32 s% sext(src_r16);
 	local quot = dst_r32 s/ sext(src_r16);
-	dst_r32 = rem << 16 | quot;
-	resflags(src_r16);
+	dst_r32 = (rem << 16) | (quot & 0xFFFF);
+	N = (quot & 0x8000) != 0;
+	Z = src_r16 == 0;
 }
 :divxu.w src_r16,dst_r32 is op8=0x53; src_r16 & dst_r32 {
-	local rem = dst_r32 % sext(src_r16);
-	local quot = dst_r32 / sext(src_r16);
-	dst_r32 = rem << 16 | quot;
-	resflags(src_r16);
+	local rem = dst_r32 % zext(src_r16);
+	local quot = dst_r32 / zext(src_r16);
+	dst_r32 = (rem << 16) | (quot & 0xFFFF);
+	N = (src_r16 & 0x8000) != 0;
+	Z = src_r16 == 0;
 }
 :eepmov.w is op16=0x7BD4; op16=0x598F {
 	if (r4l != 0) goto <end>;

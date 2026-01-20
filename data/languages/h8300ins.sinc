@@ -339,10 +339,11 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 	resflags(dst_r8);
 }
 :divxu.b src_r8,dst_r16 is op8=0x51; src_r8 & dst_r16 {
-	local rem = dst_r16 % sext(src_r8);
-	local quot = dst_r16 / sext(src_r8);
-	dst_r16 = rem << 8 | quot;
-	resflags(src_r8);
+	local rem = dst_r16 % zext(src_r8);
+	local quot = dst_r16 / zext(src_r8);
+	dst_r16 = (rem << 8) | (quot & 0xFF);
+	N = (src_r8 & 0x80) != 0;
+	Z = src_r8 == 0;
 }
 :eepmov.b is op16=0x7B5C; op16=0x598F {
 	if (r4l != 0) goto <end>;
