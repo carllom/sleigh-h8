@@ -199,11 +199,11 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 	resflags(dst_r16-op_imm16);
 }
 :cmp.l op_imm32,dst_r32 is op8=0x7A; op4=2 & dst_r32; op_imm32 {
-	subflags11(dst_r32, op_imm32);
+	subflags27(dst_r32, op_imm32);
 	resflags(dst_r32-op_imm32);
 }
 :cmp.l src_r321,dst_r32 is op8=0x1F; src_r321 & dst_r32 {
-	subflags11(dst_r32, src_r321);
+	subflags27(dst_r32, src_r321);
 	resflags(dst_r32-src_r321);
 }
 :dec.w "#"1,dst_r16 is op8=0x1B; hnyb=5 & dst_r16 {
