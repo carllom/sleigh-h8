@@ -412,15 +412,15 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 }
 
 :shal.w dst_r16 is op8=0x10; op4=9 & dst_r16 {
-	V = (dst_r16 & 0x8000) != 0;
-	C = V;
+	C = (dst_r16 & 0x8000) != 0;
 	dst_r16 = dst_r16 << 1;
+	V = C ^ ((dst_r16 & 0x8000) != 0);
 	resflags(dst_r16);
 }
 :shal.l dst_r32 is op8=0x10; op4=0xB & dst_r32 {
-	V = (dst_r32 & 0x80000000) != 0;
-	C = V;
+	C = (dst_r32 & 0x80000000) != 0;
 	dst_r32 = dst_r32 << 1;
+	V = C ^ ((dst_r32 & 0x80000000) != 0);
 	resflags(dst_r32);
 }
 :shar.w dst_r16 is op8=0x11; op4=9 & dst_r16 {
