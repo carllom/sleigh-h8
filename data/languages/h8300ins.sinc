@@ -16,8 +16,7 @@ macro movflags(result) {
 }
 
 macro addflags(operand1, operand2) {
-	local AFmask = -1 >> 4;
-	H = (((operand1 & AFmask) + (operand2 & AFmask)) & (AFmask + 1)) != 0;
+    H = carry(operand1 << 4, operand2 << 4);
 	V = scarry(operand1, operand2);
 	C = carry(operand1, operand2);
 }
