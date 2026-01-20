@@ -333,8 +333,8 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 :mov.l dst_r32,absaddr16.l is op24=0x01006B; op4=8 & dst_r32; absaddr16.l { absaddr16.l = dst_r32; movflags(dst_r32); }
 :mov.l dst_r32,absaddr24.l is op24=0x01006B; op4=0xA & dst_r32; op8=0; absaddr24.l { absaddr24.l = dst_r32; movflags(dst_r32); }
 
-:mulxs.b src_r8,dst_r16 is op24=0x01C050; src_r8 & dst_r16 { dst_r16 = sext(src_r8) * (dst_r16 & 0xFF); resflags(dst_r16); }
-:mulxs.w src_r16,dst_r32 is op24=0x01C052; src_r16 & dst_r32 { dst_r32 = sext(src_r16) * (dst_r32 & 0xFFFF); resflags(dst_r32); }
+:mulxs.b src_r8,dst_r16 is op24=0x01C050; src_r8 & dst_r16 { dst_r16 = sext(src_r8) * sext(dst_r16:1); resflags(dst_r16); }
+:mulxs.w src_r16,dst_r32 is op24=0x01C052; src_r16 & dst_r32 { dst_r32 = sext(src_r16) * sext(dst_r32:2); resflags(dst_r32); }
 :mulxu.w src_r16,dst_r32 is op8=0x52; src_r16 & dst_r32 { dst_r32 = zext(dst_r32:2) * zext(src_r16); }
 :neg.w dst_r16 is op8=0x17; op4=9 & dst_r16 { subflags11(0,dst_r16); dst_r16 = -dst_r16; resflags(dst_r16); }
 :neg.l dst_r32 is op8=0x17; op4=0xB & dst_r32 { subflags11(0,dst_r32); dst_r32 = -dst_r32; resflags(dst_r32); }

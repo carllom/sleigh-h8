@@ -417,7 +417,7 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 :movfpe absaddr16.b,dst_r8 is op8=0x6A; hnyb=4 & dst_r8; absaddr16.b { dst_r8 = absaddr16.b; movflags(dst_r8); }
 :movtpe dst_r8,absaddr16.b is op8=0x6A; hnyb=0xC & dst_r8; absaddr16.b { absaddr16.b = dst_r8; movflags(dst_r8); }
 
-:mulxu.b src_r8,dst_r16 is op8=0x50; src_r8 & dst_r16 { dst_r16 = (dst_r16 & 0xFF) * zext(src_r8); }
+:mulxu.b src_r8,dst_r16 is op8=0x50; src_r8 & dst_r16 { dst_r16 = zext(dst_r16:1) * zext(src_r8); }
 :neg.b dst_r8 is op8=0x17; op4=8 & dst_r8 { subflags3(0,dst_r8); dst_r8 = -dst_r8; resflags(dst_r8); }
 :nop is op16=0 {}
 :not.b dst_r8 is op8=0x17; op4=0 & dst_r8 { dst_r8 = ~dst_r8; movflags(dst_r8); }
