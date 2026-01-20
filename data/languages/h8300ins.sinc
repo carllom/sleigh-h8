@@ -433,26 +433,24 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 :pop.w dst_r16 is op8=0x6D; op4=7 & dst_r16 { dst_r16 = *$(SP); $(SP) = $(SP)+2; movflags(dst_r16); }
 :push.w dst_r16 is op8=0x6D; op4=0xF & dst_r16 { $(SP) = $(SP)-2; *$(SP) = dst_r16; movflags(dst_r16); }
 :rotl.b dst_r8 is op8=0x12; op4=8 & dst_r8 {
-	local c = dst_r8 >> 7;
-	C = c;
-	dst_r8 = (dst_r8 << 1) | c;
+	C = dst_r8[7,1];
+	dst_r8 = (dst_r8 << 1) | C;
 	movflags(dst_r8);
 }
 :rotr.b dst_r8 is op8=0x13; op4=8 & dst_r8 {
-	local c = dst_r8 & 1;
-	C = c;
-	dst_r8 = (c << 7) | (dst_r8 >> 1);
+	C = dst_r8[0,1];
+	dst_r8 = (C << 7) | (dst_r8 >> 1);
 	movflags(dst_r8);
 }
 :rotxl.b dst_r8 is op8=0x12; op4=0 & dst_r8 {
 	local c = C;
-	C = dst_r8 >> 7;
+	C = dst_r8[7,1];
 	dst_r8 = (dst_r8 << 1) | c;
 	movflags(dst_r8);
 }
 :rotxr.b dst_r8 is op8=0x13; op4=0 & dst_r8 {
 	local c = C;
-	C = dst_r8 & 1;
+	C = dst_r8[0,1];
 	dst_r8 = (c << 7) | (dst_r8 >> 1);
 	movflags(dst_r8);
 }
@@ -464,23 +462,23 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 :rts is op16=0x5470 { poppc(); return [pc]; }
 
 :shal.b dst_r8 is op8=0x10; op4=8 & dst_r8 {
-	V = dst_r8 >> 7;
-	C = dst_r8 >> 7;
+	V = dst_r8[7,1];
+	C = dst_r8[7,1];
 	dst_r8 = dst_r8 << 1;
 	resflags(dst_r8);
 }
 :shar.b dst_r8 is op8=0x11; op4=8 & dst_r8 {
-	C = dst_r8 & 1;
+	C = dst_r8[0,1];
 	dst_r8 = dst_r8 s>> 1;
 	movflags(dst_r8);
 }
 :shll.b dst_r8 is op8=0x10; op4=0 & dst_r8 {
-	C = dst_r8 >> 7;
+	C = dst_r8[7,1];
 	dst_r8 = dst_r8 << 1;
 	movflags(dst_r8);
 }
 :shlr.b dst_r8 is op8=0x11; op4=0 & dst_r8 {
-	C = dst_r8 & 1;
+	C = dst_r8[0,1];
 	dst_r8 = dst_r8 >> 1;
 	movflags(dst_r8);
 }
