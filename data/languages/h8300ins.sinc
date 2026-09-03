@@ -364,8 +364,8 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 	resflags(dst_r8);
 }
 
-:jmp regind_src.b is op8=0x59; regind_src.b & lnyb=0 {
-	goto [regind_src.b];
+:jmp @src_r3b is op8=0x59; src_r3b & lnyb=0 {
+	goto [src_r3b];
 }
 @ifndef ADVANCED
 :jmp addr16 is op8=0x5A; op8=0; addr16 {
@@ -375,9 +375,9 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 :jmp @addr8 is op8=0x5B; addr8 {
 	goto [addr8];
 }
-:jsr regind_src.b is op8=0x5D; regind_src.b & lnyb=0 {
+:jsr @src_r3b is op8=0x5D; src_r3b & lnyb=0 {
 	pushpc();
-	call [regind_src.b];
+	call [src_r3b];
 }
 @ifndef ADVANCED
 :jsr addr16 is op8=0x5E; op8=0; addr16 {
