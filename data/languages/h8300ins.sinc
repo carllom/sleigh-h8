@@ -16,8 +16,7 @@ macro movflags(result) {
 }
 
 macro addflags(operand1, operand2) {
-	local AFmask = -1 >> 4;
-	H = (((operand1 & AFmask) + (operand2 & AFmask)) & (AFmask + 1)) != 0;
+    H = carry(operand1 << 4, operand2 << 4);
 	V = scarry(operand1, operand2);
 	C = carry(operand1, operand2);
 }
@@ -340,10 +339,11 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 	resflags(dst_r8);
 }
 :divxu.b src_r8,dst_r16 is op8=0x51; src_r8 & dst_r16 {
-	local rem = dst_r16 % sext(src_r8);
-	local quot = dst_r16 / sext(src_r8);
-	dst_r16 = rem << 8 | quot;
-	resflags(src_r8);
+	local rem = dst_r16 % zext(src_r8);
+	local quot = dst_r16 / zext(src_r8);
+	dst_r16 = (rem << 8) | (quot & 0xFF);
+	N = (src_r8 & 0x80) != 0;
+	Z = src_r8 == 0;
 }
 :eepmov.b is op16=0x7B5C; op16=0x598F {
 	if (r4l != 0) goto <end>;
@@ -417,7 +417,7 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 :movfpe absaddr16.b,dst_r8 is op8=0x6A; hnyb=4 & dst_r8; absaddr16.b { dst_r8 = absaddr16.b; movflags(dst_r8); }
 :movtpe dst_r8,absaddr16.b is op8=0x6A; hnyb=0xC & dst_r8; absaddr16.b { absaddr16.b = dst_r8; movflags(dst_r8); }
 
-:mulxu.b src_r8,dst_r16 is op8=0x50; src_r8 & dst_r16 { dst_r16 = (dst_r16 & 0xFF) * zext(src_r8); }
+:mulxu.b src_r8,dst_r16 is op8=0x50; src_r8 & dst_r16 { dst_r16 = zext(dst_r16:1) * zext(src_r8); }
 :neg.b dst_r8 is op8=0x17; op4=8 & dst_r8 { subflags3(0,dst_r8); dst_r8 = -dst_r8; resflags(dst_r8); }
 :nop is op16=0 {}
 :not.b dst_r8 is op8=0x17; op4=0 & dst_r8 { dst_r8 = ~dst_r8; movflags(dst_r8); }
@@ -433,26 +433,26 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 :pop.w dst_r16 is op8=0x6D; op4=7 & dst_r16 { dst_r16 = *$(SP); $(SP) = $(SP)+2; movflags(dst_r16); }
 :push.w dst_r16 is op8=0x6D; op4=0xF & dst_r16 { $(SP) = $(SP)-2; *$(SP) = dst_r16; movflags(dst_r16); }
 :rotl.b dst_r8 is op8=0x12; op4=8 & dst_r8 {
-	local c = dst_r8 >> 7;
-	C = c;
+	local c = dst_r8[7,1];
 	dst_r8 = (dst_r8 << 1) | c;
+	C = c;
 	movflags(dst_r8);
 }
 :rotr.b dst_r8 is op8=0x13; op4=8 & dst_r8 {
-	local c = dst_r8 & 1;
-	C = c;
+	local c = dst_r8[0,1];
 	dst_r8 = (c << 7) | (dst_r8 >> 1);
+	C = c;
 	movflags(dst_r8);
 }
 :rotxl.b dst_r8 is op8=0x12; op4=0 & dst_r8 {
 	local c = C;
-	C = dst_r8 >> 7;
+	C = dst_r8[7,1];
 	dst_r8 = (dst_r8 << 1) | c;
 	movflags(dst_r8);
 }
 :rotxr.b dst_r8 is op8=0x13; op4=0 & dst_r8 {
 	local c = C;
-	C = dst_r8 & 1;
+	C = dst_r8[0,1];
 	dst_r8 = (c << 7) | (dst_r8 >> 1);
 	movflags(dst_r8);
 }
@@ -464,23 +464,23 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 :rts is op16=0x5470 { poppc(); return [pc]; }
 
 :shal.b dst_r8 is op8=0x10; op4=8 & dst_r8 {
-	V = dst_r8 >> 7;
-	C = dst_r8 >> 7;
+	C = dst_r8[7,1];
 	dst_r8 = dst_r8 << 1;
+	V = C ^ dst_r8[7,1];
 	resflags(dst_r8);
 }
 :shar.b dst_r8 is op8=0x11; op4=8 & dst_r8 {
-	C = dst_r8 & 1;
+	C = dst_r8[0,1];
 	dst_r8 = dst_r8 s>> 1;
 	movflags(dst_r8);
 }
 :shll.b dst_r8 is op8=0x10; op4=0 & dst_r8 {
-	C = dst_r8 >> 7;
+	C = dst_r8[7,1];
 	dst_r8 = dst_r8 << 1;
 	movflags(dst_r8);
 }
 :shlr.b dst_r8 is op8=0x11; op4=0 & dst_r8 {
-	C = dst_r8 & 1;
+	C = dst_r8[0,1];
 	dst_r8 = dst_r8 >> 1;
 	movflags(dst_r8);
 }

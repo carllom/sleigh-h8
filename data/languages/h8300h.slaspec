@@ -85,7 +85,7 @@ macro poppcccr() {
 }
 
 macro subflags27(operand1,operand2) {
-  H = (operand1 & 0x0FFFFF) < (operand2 & 0x0FFFFF);
+  H = (operand1 & 0x0FFFFFFF) < (operand2 & 0x0FFFFFFF);
   V = sborrow(operand1,operand2);
   C = operand1 < operand2;
 }
@@ -199,11 +199,11 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 	resflags(dst_r16-op_imm16);
 }
 :cmp.l op_imm32,dst_r32 is op8=0x7A; op4=2 & dst_r32; op_imm32 {
-	subflags11(dst_r32, op_imm32);
+	subflags27(dst_r32, op_imm32);
 	resflags(dst_r32-op_imm32);
 }
 :cmp.l src_r321,dst_r32 is op8=0x1F; src_r321 & dst_r32 {
-	subflags11(dst_r32, src_r321);
+	subflags27(dst_r32, src_r321);
 	resflags(dst_r32-src_r321);
 }
 :dec.w "#"1,dst_r16 is op8=0x1B; hnyb=5 & dst_r16 {
@@ -229,20 +229,23 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 :divxs.b src_r8,dst_r16 is op24=0x01D051; src_r8 & dst_r16 {
 	local rem = dst_r16 s% sext(src_r8);
 	local quot = dst_r16 s/ sext(src_r8);
-	dst_r16 = rem << 8 | quot;
-	resflags(src_r8);
+	dst_r16 = (rem << 8) | (quot & 0xFF);
+	N = (quot & 0x80) != 0;
+	Z = src_r8 == 0;
 }
 :divxs.w src_r16,dst_r32 is op24=0x01D053; src_r16 & dst_r32 {
 	local rem = dst_r32 s% sext(src_r16);
 	local quot = dst_r32 s/ sext(src_r16);
-	dst_r32 = rem << 16 | quot;
-	resflags(src_r16);
+	dst_r32 = (rem << 16) | (quot & 0xFFFF);
+	N = (quot & 0x8000) != 0;
+	Z = src_r16 == 0;
 }
 :divxu.w src_r16,dst_r32 is op8=0x53; src_r16 & dst_r32 {
-	local rem = dst_r32 % sext(src_r16);
-	local quot = dst_r32 / sext(src_r16);
-	dst_r32 = rem << 16 | quot;
-	resflags(src_r16);
+	local rem = dst_r32 % zext(src_r16);
+	local quot = dst_r32 / zext(src_r16);
+	dst_r32 = (rem << 16) | (quot & 0xFFFF);
+	N = (src_r16 & 0x8000) != 0;
+	Z = src_r16 == 0;
 }
 :eepmov.w is op16=0x7BD4; op16=0x598F {
 	if (r4l != 0) goto <end>;
@@ -282,7 +285,7 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 	resflags(dst_r16);
 }
 :inc.l "#"1,dst_r32 is op8=0x0B; hnyb=7 & dst_r32 {
-	V = dst_r32 == 0x80000000;
+	V = dst_r32 == 0x7FFFFFFF;
 	dst_r32 = dst_r32 + 1;
 	resflags(dst_r32);
 }
@@ -333,11 +336,11 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 :mov.l dst_r32,absaddr16.l is op24=0x01006B; op4=8 & dst_r32; absaddr16.l { absaddr16.l = dst_r32; movflags(dst_r32); }
 :mov.l dst_r32,absaddr24.l is op24=0x01006B; op4=0xA & dst_r32; op8=0; absaddr24.l { absaddr24.l = dst_r32; movflags(dst_r32); }
 
-:mulxs.b src_r8,dst_r16 is op24=0x01C050; src_r8 & dst_r16 { dst_r16 = sext(src_r8) * (dst_r16 & 0xFF); resflags(dst_r16); }
-:mulxs.w src_r16,dst_r32 is op24=0x01C052; src_r16 & dst_r32 { dst_r32 = sext(src_r16) * (dst_r32 & 0xFFFF); resflags(dst_r32); }
+:mulxs.b src_r8,dst_r16 is op24=0x01C050; src_r8 & dst_r16 { dst_r16 = sext(src_r8) * sext(dst_r16:1); resflags(dst_r16); }
+:mulxs.w src_r16,dst_r32 is op24=0x01C052; src_r16 & dst_r32 { dst_r32 = sext(src_r16) * sext(dst_r32:2); resflags(dst_r32); }
 :mulxu.w src_r16,dst_r32 is op8=0x52; src_r16 & dst_r32 { dst_r32 = zext(dst_r32:2) * zext(src_r16); }
 :neg.w dst_r16 is op8=0x17; op4=9 & dst_r16 { subflags11(0,dst_r16); dst_r16 = -dst_r16; resflags(dst_r16); }
-:neg.l dst_r32 is op8=0x17; op4=0xB & dst_r32 { subflags11(0,dst_r32); dst_r32 = -dst_r32; resflags(dst_r32); }
+:neg.l dst_r32 is op8=0x17; op4=0xB & dst_r32 { subflags27(0,dst_r32); dst_r32 = -dst_r32; resflags(dst_r32); }
 :not.w dst_r16 is op8=0x17; op4=1 & dst_r16 { dst_r16 = ~dst_r16; movflags(dst_r16); }
 :not.l dst_r32 is op8=0x17; op4=3 & dst_r32 { dst_r32 = ~dst_r32; movflags(dst_r32); }
 :or.w op_imm16,dst_r16 is op8=0x79; op4=4 & dst_r16; op_imm16 {
@@ -409,15 +412,15 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 }
 
 :shal.w dst_r16 is op8=0x10; op4=9 & dst_r16 {
-	V = (dst_r16 & 0x8000) != 0;
-	C = V;
+	C = (dst_r16 & 0x8000) != 0;
 	dst_r16 = dst_r16 << 1;
+	V = C ^ ((dst_r16 & 0x8000) != 0);
 	resflags(dst_r16);
 }
 :shal.l dst_r32 is op8=0x10; op4=0xB & dst_r32 {
-	V = (dst_r32 & 0x80000000) != 0;
-	C = V;
+	C = (dst_r32 & 0x80000000) != 0;
 	dst_r32 = dst_r32 << 1;
+	V = C ^ ((dst_r32 & 0x80000000) != 0);
 	resflags(dst_r32);
 }
 :shar.w dst_r16 is op8=0x11; op4=9 & dst_r16 {
