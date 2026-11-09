@@ -247,12 +247,23 @@ cc2: "le" is hnyb=15 & lnyb=0 { tmp:1 = Z || (V!=N); export tmp; }
 	N = (src_r16 & 0x8000) != 0;
 	Z = src_r16 == 0;
 }
-:eepmov.w is op16=0x7BD4; op16=0x598F {
-	if (r4l != 0) goto <end>;
+:eepmov.b is op16=0x7B5C; op16=0x598F {
+	if (r4l == 0) goto <end>;
 	<nextbyte>
-	*:2 er6 = *:2 er5;
-	er5 = er5 + 2;
-	er6 = er6 + 2;
+	*:1 er6 = *:1 er5;
+	er5 = er5 + 1;
+	er6 = er6 + 1;
+	r4l = r4l - 1;
+	if (r4l != 0) goto <nextbyte>;
+	<end>
+}
+# R4 is a byte count
+:eepmov.w is op16=0x7BD4; op16=0x598F {
+	if (r4 == 0) goto <end>;
+	<nextbyte>
+	*:1 er6 = *:1 er5;
+	er5 = er5 + 1;
+	er6 = er6 + 1;
 	r4 = r4 - 1;
 	if (r4 != 0) goto <nextbyte>;
 	<end>
