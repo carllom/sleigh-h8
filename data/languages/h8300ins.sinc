@@ -345,19 +345,18 @@ cc: "le" is lnyb=15 { tmp:1 = Z||(V!=N); export tmp; }
 	N = (src_r8 & 0x80) != 0;
 	Z = src_r8 == 0;
 }
+@ifndef ADVANCED
 :eepmov.b is op16=0x7B5C; op16=0x598F {
-	if (r4l != 0) goto <end>;
+	if (r4l == 0) goto <end>;
 	<nextbyte>
-	local src:4 = zext(r5);
-	local dst:4 = zext(r6);
-	*:1 dst = *:1 src;
-#	*:1 r6 = *:1 r5;
+	*:1 r6 = *:1 r5;
 	r5 = r5 + 1;
 	r6 = r6 + 1;
 	r4l = r4l - 1;
 	if (r4l != 0) goto <nextbyte>;
 	<end>
 }
+@endif
 :inc.b dst_r8 is op8=0x0A; hnyb=0 & dst_r8 {
 	V = dst_r8 == 0x7F;
 	dst_r8 = dst_r8 + 1;
